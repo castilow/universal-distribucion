@@ -96,20 +96,29 @@ class AuthController extends GetxController {
 
   // Handle user auth
   Future<void> checkUserAccount() async {
+    debugPrint('👤 checkUserAccount() -> Iniciando...');
+    
     // Check logged in firebase user
     if (firebaseUser == null) {
+      debugPrint('👤 checkUserAccount() -> ❌ firebaseUser es null, redirigiendo a signInOrSignUp');
       // Go directly to sign in page, skip welcome screen
       Future(() => Get.offAllNamed(AppRoutes.signInOrSignUp));
       return;
     }
 
+    debugPrint('👤 firebaseUser ID: ${firebaseUser!.uid}');
+    debugPrint('👤 Email: ${firebaseUser!.email}');
+    debugPrint('👤 Email verificado: ${firebaseUser!.emailVerified}');
+
     // Check if email is verified
     if (!firebaseUser!.emailVerified) {
+      debugPrint('👤 Email no verificado, recargando usuario...');
       // Reload user to get latest verification status
       await firebaseUser!.reload();
       
       // Check again after reload
       if (!firebaseUser!.emailVerified) {
+        debugPrint('👤 Email aún no verificado, enviando verificación y redirigiendo a verifyEmail');
         // Send email verification
         await firebaseUser!.sendEmailVerification();
         // Go to verify email screen
@@ -118,41 +127,57 @@ class AuthController extends GetxController {
       }
     }
 
+    debugPrint('👤 Email verificado, continuando...');
+
     // Init app controller
     Get.put(AppController(), permanent: true);
+    debugPrint('👤 AppController inicializado');
 
     // Check User Account in database
+    debugPrint('👤 Buscando usuario en base de datos con UID: ${firebaseUser!.uid}');
     final user = await UserApi.getUser(firebaseUser!.uid);
 
     // Check user
     if (user == null) {
+      debugPrint('👤 ❌ Usuario no encontrado en base de datos, redirigiendo a signUp');
       // Go to sign-up page to complete profile
       Future(() => Get.offAllNamed(AppRoutes.signUp));
       return;
     }
 
+    debugPrint('👤 ✅ Usuario encontrado en base de datos');
+    debugPrint('👤 Nombre: ${user.fullname}');
+    debugPrint('👤 Estado: ${user.status}');
+
     // Check blocked account status
     if (user.status == 'blocked') {
+      debugPrint('👤 ❌ Cuenta bloqueada, redirigiendo a blockedAccount');
       // Go to blocked account page
       Future(() => Get.offAllNamed(AppRoutes.blockedAccount));
       return;
     }
 
+    debugPrint('👤 Cuenta activa, actualizando información...');
+
     // Update the current user model
     _updateCurrentUser(user);
+    debugPrint('👤 Usuario actualizado en el controlador');
 
     // Update current user info
     await UserApi.updateUserInfo(user);
+    debugPrint('👤 Información de usuario actualizada en Firestore');
 
     // Inicializar ZEGOCLOUD después de que el usuario esté autenticado
     try {
       final zegoService = Get.find<ZegoCallService>();
       await zegoService.initializeWhenUserAuthenticated();
+      debugPrint('👤 ZEGOCLOUD inicializado');
     } catch (e) {
-      debugPrint('AuthController.checkUserAccount() -> Error inicializando ZEGOCLOUD: $e');
+      debugPrint('👤 ⚠️ Error inicializando ZEGOCLOUD: $e');
     }
 
     // Go to home page
+    debugPrint('👤 ✅ checkUserAccount() completado, redirigiendo a home');
     Future(() => Get.offAllNamed(AppRoutes.home));
   }
 

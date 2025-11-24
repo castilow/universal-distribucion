@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_iconly/flutter_iconly.dart';
+import 'package:chat_messenger/components/chat_background_wrapper.dart';
 import 'package:chat_messenger/api/message_api.dart';
 import 'package:chat_messenger/components/loading_indicator.dart';
 import 'package:chat_messenger/components/no_data.dart';
@@ -13,6 +14,7 @@ import 'package:chat_messenger/models/user.dart';
 import 'package:chat_messenger/helpers/date_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:chat_messenger/tabs/groups/components/update_message.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:get/get.dart';
 
 import 'components/appbar_tools.dart';
@@ -30,6 +32,7 @@ import '../../components/audio_player_bar.dart';
 import '../../components/audio_recorder_overlay.dart';
 import '../../components/voice_recording_bottom_bar.dart';
 import '../../components/voice_recording_mode.dart';
+import 'components/klink_ai_chat_view.dart';
 
 class MessageScreen extends StatelessWidget {
   const MessageScreen({
@@ -45,6 +48,11 @@ class MessageScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Check for Klink AI User
+    if (user?.userId == 'klink_ai_assistant') {
+      return KlinkAIChatView(user: user!);
+    }
+
     // Init controllers
     final MessageController controller = Get.put(
       MessageController(isGroup: isGroup, user: user),
@@ -142,21 +150,10 @@ class MessageScreen extends StatelessWidget {
                         : const SizedBox.shrink();
                   }),
                   
+
+
                   // Contenido principal del chat
-                  Container(
-                    decoration: BoxDecoration(
-                      // Fondo de abajo: chat2.png cubriendo toda la pantalla
-                      color: const Color(0xFF000000), // Fondo negro base
-                      image: wallpaperPath != null
-                          ? DecorationImage(
-                              image: FileImage(File(wallpaperPath)),
-                              fit: BoxFit.cover,
-                            )
-                          : const DecorationImage(
-                              image: AssetImage('assets/images/chat2.png'),
-                              fit: BoxFit.cover,
-                            ),
-                    ),
+                  ChatBackgroundWrapper(
                     child: GestureDetector(
                       // Cerrar el teclado SOLO con un toque (tap),
                       // para permitir desplazar/scroll con el teclado abierto
@@ -186,6 +183,7 @@ class MessageScreen extends StatelessWidget {
                             repeat: ImageRepeat.repeat,
                             alignment: Alignment.center,
                             scale: 3.0,
+                            opacity: 0.1, // Make pattern subtle
                           ),
                         ),
                         child: Column(
@@ -263,107 +261,118 @@ class MessageScreen extends StatelessWidget {
           // Get Messages List in reversed order
           final List<Message> messages = controller.messages;
 
-          return ListView.builder(
-            reverse: true,
-            shrinkWrap: true,
-            cacheExtent: double.maxFinite,
-            controller: controller.scrollController,
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.only(bottom: 8),
-            itemCount: messages.length,
-            itemBuilder: (context, index) {
-              
-              final Message message = messages[index];
+          return AnimationLimiter(
+            child: ListView.builder(
+              reverse: true,
+              shrinkWrap: true,
+              cacheExtent: double.maxFinite,
+              controller: controller.scrollController,
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: 8),
+              itemCount: messages.length,
+              itemBuilder: (context, index) {
+                
+                final Message message = messages[index];
 
-              // Message rendering
+                // Message rendering
 
-              // Check unread message to update it
-              if (!isGroup) {
-                if (!message.isSender && !message.isRead) {
-                  MessageApi.readMsgReceipt(
-                    messageId: message.msgId,
-                    receiverId: user!.userId,
-                  );
-                }
-              }
-
-              // <--- Handle group date --->
-              final DateTime? sentAt = message.sentAt;
-              Widget dateSeparator = const SizedBox.shrink();
-
-              // Check sent time
-              if (sentAt != null) {
-                // Check first element in reverse order
-                if (index == messages.length - 1) {
-                  dateSeparator = GroupDateSeparator(sentAt.formatDateTime);
-                } else
-                // Validate the index in range
-                if (index + 1 < messages.length) {
-                  // Get previous date in reverse order
-                  DateTime prevDate = messages[index + 1].sentAt!;
-                  // Check different dates
-                  if (!(sentAt.isSameDate(prevDate))) {
-                    dateSeparator = GroupDateSeparator(
-                      sentAt.formatDateTime,
+                // Check unread message to update it
+                if (!isGroup) {
+                  if (!message.isSender && !message.isRead) {
+                    MessageApi.readMsgReceipt(
+                      messageId: message.msgId,
+                      receiverId: user!.userId,
                     );
                   }
                 }
-              }
 
-              // Get sender user
-              final User senderUser =
-                  isGroup ? group!.getMemberProfile(message.senderId) : user!;
+                // <--- Handle group date --->
+                final DateTime? sentAt = message.sentAt;
+                Widget dateSeparator = const SizedBox.shrink();
 
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Show Group Date time
-                  dateSeparator,
-                  // Show encrypted notice
-                  if (!isGroup && index == messages.length - 1)
-                    const EncryptedNotice(),
-                  // Bubble message
-                  GestureDetector(
-                    onLongPress: () {
-                      if (message.type == MessageType.groupUpdate) return;
-                      if (!controller.isMultiSelectMode.value) {
-                        controller.enterMultiSelectMode(message);
-                      } else {
-                        controller.toggleMessageSelection(message);
-                      }
-                    },
-                    onTap: () {
-                      if (controller.isMultiSelectMode.value) {
-                        controller.toggleMessageSelection(message);
-                      }
-                    },
-                    child: Container(
-                      margin: controller.isMultiSelectMode.value
-                          ? const EdgeInsets.symmetric(vertical: 1.0)
-                          : null,
-                      child: isGroup && message.type == MessageType.groupUpdate
-                          ? UpdateMessage(
-                              group: group!,
-                              message: message,
-                            )
-                          : BubbleMessage(
-                              message: message,
-                              user: user,
-                              group: group,
-                              controller: controller,
-                              onTapProfile: message.isSender
-                                  ? null
-                                  : () => RoutesHelper.toProfileView(
-                                      senderUser, isGroup),
-                              onReplyMessage: message.isDeleted
-                                  ? null
-                                  : () => controller.replyToMessage(message),
+                // Check sent time
+                if (sentAt != null) {
+                  // Check first element in reverse order
+                  if (index == messages.length - 1) {
+                    dateSeparator = GroupDateSeparator(sentAt.formatDateTime);
+                  } else
+                  // Validate the index in range
+                  if (index + 1 < messages.length) {
+                    // Get previous date in reverse order
+                    DateTime prevDate = messages[index + 1].sentAt!;
+                    // Check different dates
+                    if (!(sentAt.isSameDate(prevDate))) {
+                      dateSeparator = GroupDateSeparator(
+                        sentAt.formatDateTime,
+                      );
+                    }
+                  }
+                }
+
+                // Get sender user
+                final User senderUser =
+                    isGroup ? group!.getMemberProfile(message.senderId) : user!;
+
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Show Group Date time
+                    dateSeparator,
+                    // Show encrypted notice
+                    if (!isGroup && index == messages.length - 1)
+                      const EncryptedNotice(),
+                    // Bubble message
+                    GestureDetector(
+                      onLongPress: () {
+                        if (message.type == MessageType.groupUpdate) return;
+                        if (!controller.isMultiSelectMode.value) {
+                          controller.enterMultiSelectMode(message);
+                        } else {
+                          controller.toggleMessageSelection(message);
+                        }
+                      },
+                      onTap: () {
+                        if (controller.isMultiSelectMode.value) {
+                          controller.toggleMessageSelection(message);
+                        }
+                      },
+                      child: Container(
+                        margin: controller.isMultiSelectMode.value
+                            ? const EdgeInsets.symmetric(vertical: 1.0)
+                            : null,
+                        child: AnimationConfiguration.staggeredList(
+                          position: index,
+                          duration: const Duration(milliseconds: 375),
+                          child: SlideAnimation(
+                            verticalOffset: 50.0,
+                            child: FadeInAnimation(
+                              child: isGroup && message.type == MessageType.groupUpdate
+                                  ? UpdateMessage(
+                                      group: group!,
+                                      message: message,
+                                    )
+                                  : BubbleMessage(
+                                      message: message,
+                                      user: user,
+                                      group: group,
+                                      controller: controller,
+                                      onTapProfile: message.isSender
+                                          ? null
+                                          : () => RoutesHelper.toProfileView(
+                                              senderUser, isGroup),
+                                      onReplyMessage: message.isDeleted
+                                          ? null
+                                          : () => controller.replyToMessage(message),
+                                    ),
                             ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ],
-              );
-            },
+                  ],
+                );
+              },
+            ),
           );
         }
       },

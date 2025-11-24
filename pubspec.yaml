@@ -48,7 +48,6 @@ dependencies:
   flutter_local_notifications: ^17.2.3
   # ──────────────────── Autenticación Social ────────────────────
   google_sign_in: ^6.2.1
-  # sign_in_with_apple: removed
 
   # ──────────────────── Multimedia ────────────────────
   camera:               ^0.11.1
@@ -64,8 +63,8 @@ dependencies:
   audio_waveforms:      ^1.0.4
   
   # ──────────────────── Análisis Real de Audio ────────────────────
-  just_audio:           ^0.9.40
-  audio_session:        ^0.1.18
+  just_audio:           ^0.10.5
+  audio_session:        ^0.2.2
   
   # ──────────────────── Transcripción de Audio ────────────────────
   speech_to_text:       ^7.2.0
@@ -76,10 +75,10 @@ dependencies:
   mime:                 ^2.0.0
   file_picker:          ^10.1.9
   wechat_assets_picker: ^9.5.1
-  share_plus:           ^11.0.0
+  share_plus:           ^12.0.1
 
   # ──────────────────── Permisos / Geolocalización ────────────────────
-  permission_handler:   ^11.4.0
+  permission_handler:   ^12.0.1
   geolocator:           ^12.0.0
   record:               ^6.0.0
 
@@ -92,7 +91,7 @@ dependencies:
   crypto:               ^3.0.6
 
   # ──────────────────── Video-llamadas (ZEGOCLOUD) ────────────────────
-  zego_uikit_prebuilt_call: ^4.12.0
+  zego_uikit_prebuilt_call: ^4.21.1
   zego_uikit_signaling_plugin: ^2.6.0
   flutter_ringtone_player: ^4.0.0+4
 
@@ -110,6 +109,8 @@ dependencies:
   easy_rich_text:       ^2.2.0
   device_info_plus:     ^11.4.0
   fl_chart:             ^0.66.2
+  flutter_colorpicker:  ^1.0.3
+  flutter_staggered_animations: ^1.1.1
 
 #######################################################################
 # OVERRIDES (fijamos intl 0.20.2 para TODOS)

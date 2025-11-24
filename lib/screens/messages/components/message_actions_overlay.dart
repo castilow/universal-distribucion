@@ -16,6 +16,7 @@ import 'package:chat_messenger/screens/messages/components/bubbles/location_mess
 import 'package:chat_messenger/screens/messages/components/read_time_status.dart';
 import 'package:chat_messenger/screens/messages/components/reply_message.dart';
 import 'package:chat_messenger/screens/messages/components/forwarded_badge.dart';
+import 'package:chat_messenger/controllers/preferences_controller.dart';
 
 /// --------- API ----------
 Future<void> showMessageActionsOverlay({
@@ -349,9 +350,11 @@ class _OfficialMessageBubble extends StatelessWidget {
     }.contains(message.type);
 
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    // Usar colores personalizados si existen, sino usar los por defecto
+    final PreferencesController prefController = Get.find();
     final Color bubble = isSender
-        ? const Color(0xFFDCF8C6)
-        : (isDark ? const Color(0xFF2A2A2A) : Colors.white);
+        ? prefController.getSentBubbleColor()
+        : prefController.getReceivedBubbleColor(isDark);
 
     Widget bubbleContent;
 
@@ -364,15 +367,17 @@ class _OfficialMessageBubble extends StatelessWidget {
       );
     } else {
       // Texto/otros: MISMO contenedor oficial (padding/boxShadow/borderRadius)
-      bubbleContent = Container(
+      bubbleContent = Obx(() {
+        final double radius = prefController.customBubbleRadius.value;
+        return Container(
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
         decoration: BoxDecoration(
           color: bubble.withOpacity(0.98),
           borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(!isSender ? 18 : 20),
-            topRight: Radius.circular(isSender ? 18 : 20),
-            bottomLeft: const Radius.circular(20),
-            bottomRight: const Radius.circular(20),
+              topLeft: Radius.circular(!isSender ? 16 : radius),
+              topRight: Radius.circular(isSender ? 16 : radius),
+              bottomLeft: Radius.circular(radius),
+              bottomRight: Radius.circular(radius),
           ),
           boxShadow: [
             BoxShadow(
@@ -400,6 +405,7 @@ class _OfficialMessageBubble extends StatelessWidget {
           ],
         ),
       );
+      });
     }
 
     // Alineación izquierda/derecha EXACTA

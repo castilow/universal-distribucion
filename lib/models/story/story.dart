@@ -17,6 +17,8 @@ class Story {
   List<StoryImage> images;
   List<StoryVideo> videos;
   List<String> viewers;
+  List<String> bestFriendsOnly; // Lista de IDs de usuarios que pueden ver (VIP)
+  bool isVipOnly; // Si solo es visible para mejores amigos
   DateTime? updatedAt;
 
   Story({
@@ -28,6 +30,8 @@ class Story {
     this.videos = const [],
     this.images = const [],
     this.viewers = const [],
+    this.bestFriendsOnly = const [],
+    this.isVipOnly = false,
     required this.updatedAt,
   });
 
@@ -99,6 +103,8 @@ class Story {
     List<StoryImage>? images,
     List<StoryVideo>? videos,
     List<String>? viewers,
+    List<String>? bestFriendsOnly,
+    bool? isVipOnly,
     DateTime? updatedAt,
   }) {
     return Story(
@@ -110,6 +116,8 @@ class Story {
       images: images ?? this.images,
       videos: videos ?? this.videos,
       viewers: viewers ?? this.viewers,
+      bestFriendsOnly: bestFriendsOnly ?? this.bestFriendsOnly,
+      isVipOnly: isVipOnly ?? this.isVipOnly,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -127,6 +135,8 @@ class Story {
       texts: StoryText.textsFrom(data['texts']),
       images: StoryImage.imagesFrom(data['images']),
       videos: StoryVideo.videosFrom(data['videos']),
+      bestFriendsOnly: List<String>.from(data['bestFriendsOnly'] ?? []),
+      isVipOnly: data['isVipOnly'] == true,
       updatedAt: data['updatedAt'] != null
           ? data['updatedAt']!.toDate()
           : DateTime.now(),
@@ -143,6 +153,8 @@ class Story {
       'images': images.map((image) => image.toMap()).toList(),
       'videos': videos.map((video) => video.toMap()).toList(),
       'viewers': [],
+      'bestFriendsOnly': bestFriendsOnly,
+      'isVipOnly': isVipOnly,
       'updatedAt': FieldValue.serverTimestamp(),
     };
   }
@@ -150,12 +162,28 @@ class Story {
   static Map<String, dynamic> toUpdateMap({
     required StoryType type,
     required List<Map<String, dynamic>> values,
+    List<String>? bestFriendsOnly,
+    bool? isVipOnly,
   }) {
-    return {
+    final map = {
       '${type.name}s': values,
       'type': type.name,
       'viewers': [],
       'updatedAt': FieldValue.serverTimestamp(),
     };
+    if (bestFriendsOnly != null) {
+      map['bestFriendsOnly'] = bestFriendsOnly;
+    }
+    if (isVipOnly != null) {
+      map['isVipOnly'] = isVipOnly;
+    }
+    return map;
+  }
+  
+  // Verificar si el usuario actual puede ver esta historia (VIP)
+  bool canView(String currentUserId) {
+    if (!isVipOnly) return true; // Si no es VIP, todos pueden ver
+    if (userId == currentUserId) return true; // El dueño siempre puede ver
+    return bestFriendsOnly.contains(currentUserId); // Solo mejores amigos
   }
 }

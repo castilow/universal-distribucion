@@ -11,6 +11,7 @@ import 'package:chat_messenger/components/cached_circle_avatar.dart';
 import 'package:chat_messenger/components/sent_time.dart';
 import 'package:chat_messenger/theme/app_theme.dart';
 import 'package:chat_messenger/config/theme_config.dart';
+import 'package:chat_messenger/tabs/stories/controller/story_controller.dart';
 
 // ignore: must_be_immutable
 class ChatCard extends StatelessWidget {
@@ -47,24 +48,24 @@ class ChatCard extends StatelessWidget {
       },
       background: _buildSwipeActions(context, user),
       secondaryBackground: Container(
-        color: Colors.red,
+        color: errorColor,
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         child: const Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.delete,
+              Icons.delete_outline,
               color: Colors.white,
-              size: 30,
+              size: 28,
             ),
             SizedBox(height: 4),
             Text(
-              'Eliminar',
+              'Delete',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 12,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
@@ -87,68 +88,108 @@ class ChatCard extends StatelessWidget {
         },
         behavior: HitTestBehavior.opaque,
         child: Container(
-          padding: const EdgeInsets.only(top: 8, bottom: 8, left: 16, right: 16),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: isDarkMode ? greyLight.withOpacity(0.10) : greyLight,
-              ),
-            ),
-          ),
+          // Telegram style: 72px height typically, larger avatar
+          height: 76, 
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           child: StreamBuilder<User>(
             stream: UserApi.getUserUpdates(user.userId),
             builder: (context, snapshot) {
               updatedUser = snapshot.data;
               final User receiver = updatedUser ?? user;
 
+              // Check for active story
+              final StoryController storyController = Get.find();
+              // Use Obx or just check value since this is inside a StreamBuilder which rebuilds on user updates
+              // Ideally we should listen to stories changes too, but for now simple check:
+              final bool hasStory = storyController.stories.any((s) => s.userId == receiver.userId);
+
               return Row(
                 children: [
-                  CachedCircleAvatar(
-                    imageUrl: receiver.photoUrl,
-                    radius: 28,
-                    isOnline: receiver.isOnline,
-                    borderColor: chat.unread > 0 ? primaryColor : null,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              receiver.fullname,
-                              style: Theme.of(context).textTheme.titleMedium,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            SentTime(
-                              time: chat.isDeleted ? chat.updatedAt : chat.sentAt,
-                            ),
-                          ],
+                  Hero(
+                    tag: 'avatar_${receiver.userId}',
+                    child: Container(
+                      padding: hasStory ? const EdgeInsets.all(2) : EdgeInsets.zero,
+                      decoration: hasStory ? BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.blue, // WhatsApp-style blue indicator
+                          width: 2,
                         ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: LastMessage(chat: chat, user: receiver),
-                            ),
-                            if (chat.isMuted) ...[
+                      ) : null,
+                      child: CachedCircleAvatar(
+                        imageUrl: receiver.photoUrl,
+                        radius: 28, // 56px diameter
+                        isOnline: receiver.isOnline,
+                        // If hasStory is true, we use the container border, so set this to null or keep for unread
+                        borderColor: null, 
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: isDarkMode ? Colors.black : lightDividerColor,
+                            width: 0.5,
+                          ),
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  receiver.fullname,
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700, // Bolder title
+                                    fontSize: 16,
+                                    height: 1.2,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
                               const SizedBox(width: 8),
-                              const Icon(
-                                Icons.volume_off,
-                                color: greyColor,
-                                size: 16,
+                              SentTime(
+                                time: chat.isDeleted ? chat.updatedAt : chat.sentAt,
                               ),
                             ],
-                            const SizedBox(width: 8),
-                            BadgeCount(
-                              counter: chat.unread,
-                              bgColor: const Color(0xFFfa4e1c),
-                            ),
-                          ],
-                        ),
-                      ],
+                          ),
+                          const SizedBox(height: 3),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: LastMessage(chat: chat, user: receiver),
+                              ),
+                              if (chat.isMuted) ...[
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.volume_off,
+                                  color: greyColor,
+                                  size: 14,
+                                ),
+                              ],
+                              if (chat.unread > 0) ...[
+                                const SizedBox(width: 8),
+                                BadgeCount(
+                                  counter: chat.unread,
+                                  bgColor: primaryColor, // Telegram Blue badge
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -280,13 +321,14 @@ class LastMessage extends StatelessWidget {
       );
     }
 
-    return Expanded(
-      child: Text(
-        chat.lastMsg,
-        style: Theme.of(context).textTheme.bodyMedium,
-        maxLines: 1, // Limitar a una sola línea
-        overflow: TextOverflow.ellipsis,
+    return Text(
+      chat.lastMsg,
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        color: greyColor, // Lighter gray for message preview
+        height: 1.2,
       ),
+      maxLines: 1, // Limitar a una sola línea
+      overflow: TextOverflow.ellipsis,
     );
   }
 }

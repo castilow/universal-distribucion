@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:rxdart/rxdart.dart';
@@ -13,6 +14,8 @@ import 'package:chat_messenger/models/story/submodels/seen_by.dart';
 import 'package:chat_messenger/models/story/submodels/story_image.dart';
 import 'package:chat_messenger/models/story/submodels/story_text.dart';
 import 'package:chat_messenger/models/story/submodels/story_video.dart';
+import 'package:chat_messenger/models/story/submodels/story_music.dart';
+import 'package:chat_messenger/api/best_friends_api.dart';
 import 'package:chat_messenger/models/user.dart';
 import 'package:chat_messenger/controllers/auth_controller.dart';
 
@@ -27,14 +30,49 @@ abstract class StoryApi {
 
   // Get contacts story
   static Stream<List<Story>> getStories(List<User> contacts) {
+    final currentUserId = AuthController.instance.currentUser.userId;
+    
+    debugPrint('📚 [STORY_API] Obteniendo historias para ${contacts.length + 1} usuarios (incluyendo usuario actual)');
+    
     final List<Stream<List<Story>>> stories = [];
     stories.add(_getUserStory(AuthController.instance.currentUser));
     for (final contact in contacts) {
       stories.add(_getUserStory(contact));
     }
+    
     return CombineLatestStream(stories, (values) {
-      return values.expand((list) => list).toList()
-        ..sort((a, b) => b.updatedAt!.compareTo(a.updatedAt!));
+      final allStories = values.expand((list) => list).toList();
+      debugPrint('📚 [STORY_API] Total de historias obtenidas: ${allStories.length}');
+      
+      // Filtrar historias: solo mostrar historias con items válidos (< 24 horas)
+      final validStories = allStories.where((story) {
+        // Primero verificar que tenga items válidos (no expirados)
+        if (!story.hasValidItems) {
+          debugPrint('⏰ [STORY_API] Historia expirada o sin items válidos para usuario: ${story.userId}');
+          return false;
+        }
+        
+        // Luego filtrar historias VIP
+        // Si no es VIP, todos pueden ver
+        if (!story.isVipOnly) {
+          debugPrint('👁️ [STORY_API] Historia pública visible para usuario: ${story.userId}');
+          return true;
+        }
+        // Si es el dueño, puede ver
+        if (story.userId == currentUserId) {
+          debugPrint('👁️ [STORY_API] Historia VIP del usuario actual: ${story.userId}');
+          return true;
+        }
+        // Si el dueño tiene al usuario actual en mejores amigos, puede ver
+        final canView = story.bestFriendsOnly.contains(currentUserId);
+        debugPrint('👁️ [STORY_API] Historia VIP de ${story.userId}: ${canView ? "Visible (mejor amigo)" : "Oculta"}');
+        return canView;
+      }).toList();
+      
+      debugPrint('✅ [STORY_API] Historias válidas después de filtrar: ${validStories.length}');
+      
+      validStories.sort((a, b) => b.updatedAt!.compareTo(a.updatedAt!));
+      return validStories;
     });
   }
 
@@ -52,39 +90,58 @@ abstract class StoryApi {
   static Future<void> uploadTextStory({
     required String text,
     required Color bgColor,
+    StoryMusic? music,
+    List<String>? bestFriendsOnly,
+    bool isVipOnly = false,
   }) async {
     try {
+      debugPrint('📖 [STORY_API] Iniciando subida de historia de texto');
+      debugPrint('📖 [STORY_API] Texto: ${text.length} caracteres');
+      debugPrint('📖 [STORY_API] Música: ${music != null ? "${music.trackName} - ${music.artistName}" : "Sin música"}');
+      debugPrint('📖 [STORY_API] VIP: $isVipOnly, Mejores amigos: ${bestFriendsOnly?.length ?? 0}');
+      
       final User currentUser = AuthController.instance.currentUser;
+      debugPrint('📖 [STORY_API] Usuario: ${currentUser.userId}');
 
       // Check story doc
       final storyDoc = await storiesRef.doc(currentUser.userId).get();
+      debugPrint('📖 [STORY_API] Documento de historia existe: ${storyDoc.exists}');
 
       // New Story Text
       final StoryText storyText = StoryText(
         text: text,
         bgColor: bgColor,
+        music: music, // Incluir música si existe
         createdAt: DateTime.now(),
       );
 
       // Check result
       if (storyDoc.exists) {
         final oldTexts = List<Map<String, dynamic>>.from(storyDoc['texts']);
+        debugPrint('📖 [STORY_API] Actualizando historia existente (${oldTexts.length} textos anteriores)');
 
         // Update existing story
         await storyDoc.reference.update(
           Story.toUpdateMap(
             type: StoryType.text,
             values: [...oldTexts, storyText.toMap()],
+            bestFriendsOnly: bestFriendsOnly,
+            isVipOnly: isVipOnly,
           ),
         );
+        debugPrint('✅ [STORY_API] Historia de texto actualizada exitosamente');
       } else {
+        debugPrint('📖 [STORY_API] Creando nueva historia de texto');
         // Create new story
         final Story story = Story(
           type: StoryType.text,
           texts: [storyText],
+          bestFriendsOnly: bestFriendsOnly ?? [],
+          isVipOnly: isVipOnly,
           updatedAt: null,
         );
         await storyDoc.reference.set(story.toMap());
+        debugPrint('✅ [STORY_API] Nueva historia de texto creada exitosamente');
       }
       // Close the page
       Get.back();
@@ -94,14 +151,26 @@ abstract class StoryApi {
         'story_created_successfully'.tr,
       );
     } catch (e) {
+      debugPrint('❌ [STORY_API] Error al subir historia de texto: $e');
       DialogHelper.showSnackbarMessage(SnackMsgType.error, e.toString());
     }
   }
 
   // Create image story
-  static Future<void> uploadImageStory(File imageFile) async {
+  static Future<void> uploadImageStory(
+    File imageFile, {
+    StoryMusic? music,
+    List<String>? bestFriendsOnly,
+    bool isVipOnly = false,
+  }) async {
     try {
+      debugPrint('🖼️ [STORY_API] Iniciando subida de historia de imagen');
+      debugPrint('🖼️ [STORY_API] Archivo: ${imageFile.path}');
+      debugPrint('🖼️ [STORY_API] Música: ${music != null ? "${music.trackName} - ${music.artistName}" : "Sin música"}');
+      debugPrint('🖼️ [STORY_API] VIP: $isVipOnly, Mejores amigos: ${bestFriendsOnly?.length ?? 0}');
+      
       final User currentUser = AuthController.instance.currentUser;
+      debugPrint('🖼️ [STORY_API] Usuario: ${currentUser.userId}');
 
       DialogHelper.showProcessingDialog(
         title: 'uploading'.tr,
@@ -110,37 +179,49 @@ abstract class StoryApi {
 
       // Check story doc
       final storyDoc = await storiesRef.doc(currentUser.userId).get();
+      debugPrint('🖼️ [STORY_API] Documento de historia existe: ${storyDoc.exists}');
 
+      debugPrint('📤 [STORY_API] Subiendo imagen a Firebase Storage...');
       final String imageUrl = await AppHelper.uploadFile(
         file: imageFile,
         userId: currentUser.userId,
       );
+      debugPrint('✅ [STORY_API] Imagen subida exitosamente: $imageUrl');
 
       // New Story Image
       final StoryImage storyImage = StoryImage(
         imageUrl: imageUrl,
+        music: music,
         createdAt: DateTime.now(),
       );
 
       // Check result
       if (storyDoc.exists) {
         final oldImages = List<Map<String, dynamic>>.from(storyDoc['images']);
+        debugPrint('🖼️ [STORY_API] Actualizando historia existente (${oldImages.length} imágenes anteriores)');
 
         // Update existing story
         await storyDoc.reference.update(
           Story.toUpdateMap(
             type: StoryType.image,
             values: [...oldImages, storyImage.toMap()],
+            bestFriendsOnly: bestFriendsOnly,
+            isVipOnly: isVipOnly,
           ),
         );
+        debugPrint('✅ [STORY_API] Historia de imagen actualizada exitosamente');
       } else {
+        debugPrint('🖼️ [STORY_API] Creando nueva historia de imagen');
         // Create new story
         final Story story = Story(
           type: StoryType.image,
           images: [storyImage],
+          bestFriendsOnly: bestFriendsOnly ?? [],
+          isVipOnly: isVipOnly,
           updatedAt: null,
         );
         await storyDoc.reference.set(story.toMap());
+        debugPrint('✅ [STORY_API] Nueva historia de imagen creada exitosamente');
       }
       DialogHelper.closeDialog();
       DialogHelper.showSnackbarMessage(
@@ -148,15 +229,27 @@ abstract class StoryApi {
         'story_created_successfully'.tr,
       );
     } catch (e) {
+      debugPrint('❌ [STORY_API] Error al subir historia de imagen: $e');
       DialogHelper.closeDialog();
       DialogHelper.showSnackbarMessage(SnackMsgType.error, e.toString());
     }
   }
 
   // Create video story
-  static Future<void> uploadVideoStory(File videoFile) async {
+  static Future<void> uploadVideoStory(
+    File videoFile, {
+    StoryMusic? music,
+    List<String>? bestFriendsOnly,
+    bool isVipOnly = false,
+  }) async {
     try {
+      debugPrint('🎥 [STORY_API] Iniciando subida de historia de video');
+      debugPrint('🎥 [STORY_API] Archivo: ${videoFile.path}');
+      debugPrint('🎥 [STORY_API] Música: ${music != null ? "${music.trackName} - ${music.artistName}" : "Sin música"}');
+      debugPrint('🎥 [STORY_API] VIP: $isVipOnly, Mejores amigos: ${bestFriendsOnly?.length ?? 0}');
+      
       final User currentUser = AuthController.instance.currentUser;
+      debugPrint('🎥 [STORY_API] Usuario: ${currentUser.userId}');
 
       DialogHelper.showProcessingDialog(
         title: 'uploading'.tr,
@@ -165,39 +258,51 @@ abstract class StoryApi {
 
       // Check story doc
       final storyDoc = await storiesRef.doc(currentUser.userId).get();
+      debugPrint('🎥 [STORY_API] Documento de historia existe: ${storyDoc.exists}');
 
       // <-- Upload video -->
+      debugPrint('📤 [STORY_API] Subiendo video a Firebase Storage...');
       final String videoUrl = await AppHelper.uploadFile(
         file: videoFile,
         userId: currentUser.userId,
       );
+      debugPrint('✅ [STORY_API] Video subido exitosamente: $videoUrl');
 
       // New Story video
       final StoryVideo storyVideo = StoryVideo(
         videoUrl: videoUrl,
         thumbnailUrl: '', // No thumbnail for now
+        music: music,
         createdAt: DateTime.now(),
       );
 
       // Check result
       if (storyDoc.exists) {
         final oldVideos = List<Map<String, dynamic>>.from(storyDoc['videos']);
+        debugPrint('🎥 [STORY_API] Actualizando historia existente (${oldVideos.length} videos anteriores)');
 
         // Update existing story
         await storyDoc.reference.update(
           Story.toUpdateMap(
             type: StoryType.video,
             values: [...oldVideos, storyVideo.toMap()],
+            bestFriendsOnly: bestFriendsOnly,
+            isVipOnly: isVipOnly,
           ),
         );
+        debugPrint('✅ [STORY_API] Historia de video actualizada exitosamente');
       } else {
+        debugPrint('🎥 [STORY_API] Creando nueva historia de video');
         // Create new story
         final Story story = Story(
           type: StoryType.video,
           videos: [storyVideo],
+          bestFriendsOnly: bestFriendsOnly ?? [],
+          isVipOnly: isVipOnly,
           updatedAt: null,
         );
         await storyDoc.reference.set(story.toMap());
+        debugPrint('✅ [STORY_API] Nueva historia de video creada exitosamente');
       }
       DialogHelper.closeDialog();
       DialogHelper.showSnackbarMessage(
@@ -205,6 +310,7 @@ abstract class StoryApi {
         'story_created_successfully'.tr,
       );
     } catch (e) {
+      debugPrint('❌ [STORY_API] Error al subir historia de video: $e');
       DialogHelper.closeDialog();
       DialogHelper.showSnackbarMessage(SnackMsgType.error, e.toString());
     }
@@ -216,6 +322,9 @@ abstract class StoryApi {
     required List<SeenBy> seenByList,
   }) async {
     try {
+      debugPrint('👁️ [STORY_API] Marcando historia como vista');
+      debugPrint('👁️ [STORY_API] Historia ID: ${story.id}, Usuario: ${story.userId}');
+      
       final User currentUser = AuthController.instance.currentUser;
 
       // New seen by
@@ -226,11 +335,15 @@ abstract class StoryApi {
         time: DateTime.now(),
       );
 
+      debugPrint('👁️ [STORY_API] Nuevo visto por: ${currentUser.fullname} (${currentUser.userId})');
+
       // New seen by list
       final List<SeenBy> newSeenByList = [...seenByList, newSeenBy];
+      debugPrint('👁️ [STORY_API] Total de vistos: ${newSeenByList.length}');
 
       switch (storyItem) {
         case StoryText _:
+          debugPrint('👁️ [STORY_API] Actualizando texto de historia');
           // Update story item
           final List<StoryText> texts = story.texts.map((e) {
             if (e == storyItem) {
@@ -244,6 +357,7 @@ abstract class StoryApi {
           });
           break;
         case StoryImage _:
+          debugPrint('👁️ [STORY_API] Actualizando imagen de historia');
           // Update story item
           final List<StoryImage> images = story.images.map((e) {
             if (e == storyItem) {
@@ -257,6 +371,7 @@ abstract class StoryApi {
           });
           break;
         case StoryVideo _:
+          debugPrint('👁️ [STORY_API] Actualizando video de historia');
           // Update story item
           final List<StoryVideo> videos = story.videos.map((e) {
             if (e == storyItem) {
@@ -270,9 +385,9 @@ abstract class StoryApi {
           });
           break;
       }
-      debugPrint('markSeen() -> success');
+      debugPrint('✅ [STORY_API] Historia marcada como vista exitosamente');
     } catch (e) {
-      debugPrint('markSeen() -> error: $e');
+      debugPrint('❌ [STORY_API] Error marcando historia como vista: $e');
     }
   }
 
@@ -425,36 +540,57 @@ abstract class StoryApi {
 
   static Future<void> viewStories(List<Story> stories) async {
     try {
+      debugPrint('👁️ [STORY_API] Marcando ${stories.length} historias como vistas');
+      
       final User currentUser = AuthController.instance.currentUser;
+      debugPrint('👁️ [STORY_API] Usuario: ${currentUser.userId}');
 
       final List<Future<void>> futures = stories.map((story) {
+        debugPrint('👁️ [STORY_API] Marcando historia como vista: ${story.id}');
         return storiesRef.doc(story.id).update({
           'viewers': FieldValue.arrayUnion([currentUser.userId]),
         });
       }).toList();
       await Future.wait(futures);
-      debugPrint('viewStories() -> success');
+      debugPrint('✅ [STORY_API] ${stories.length} historias marcadas como vistas exitosamente');
     } catch (e) {
-      debugPrint('viewStories() -> error: $e');
+      debugPrint('❌ [STORY_API] Error marcando historias como vistas: $e');
     }
   }
 
   static Future<void> deleteExpiredStoryItems(Story story) async {
     try {
+      debugPrint('🧹 [STORY_API] Eliminando items expirados de historia: ${story.id}');
+      debugPrint('🧹 [STORY_API] Items actuales - Textos: ${story.texts.length}, Imágenes: ${story.images.length}, Videos: ${story.videos.length}');
+      
       final now = DateTime.now();
 
       // Filter out expired items (older than 24 hours)
       final validTexts = story.texts.where((text) {
-        return now.difference(text.createdAt) < const Duration(hours: 24);
+        final isExpired = now.difference(text.createdAt) >= const Duration(hours: 24);
+        if (isExpired) {
+          debugPrint('⏰ [STORY_API] Texto expirado (${now.difference(text.createdAt).inHours}h)');
+        }
+        return !isExpired;
       }).toList();
 
       final validImages = story.images.where((image) {
-        return now.difference(image.createdAt) < const Duration(hours: 24);
+        final isExpired = now.difference(image.createdAt) >= const Duration(hours: 24);
+        if (isExpired) {
+          debugPrint('⏰ [STORY_API] Imagen expirada (${now.difference(image.createdAt).inHours}h)');
+        }
+        return !isExpired;
       }).toList();
 
       final validVideos = story.videos.where((video) {
-        return now.difference(video.createdAt) < const Duration(hours: 24);
+        final isExpired = now.difference(video.createdAt) >= const Duration(hours: 24);
+        if (isExpired) {
+          debugPrint('⏰ [STORY_API] Video expirado (${now.difference(video.createdAt).inHours}h)');
+        }
+        return !isExpired;
       }).toList();
+
+      debugPrint('✅ [STORY_API] Items válidos - Textos: ${validTexts.length}, Imágenes: ${validImages.length}, Videos: ${validVideos.length}');
 
       // Delete expired image and video files from storage
       final expiredImages = story.images.where((image) {
@@ -465,12 +601,16 @@ abstract class StoryApi {
         return now.difference(video.createdAt) >= const Duration(hours: 24);
       }).toList();
 
+      debugPrint('🗑️ [STORY_API] Eliminando ${expiredImages.length} imágenes y ${expiredVideos.length} videos expirados del storage');
+
       // Delete files from storage
       for (final image in expiredImages) {
+        debugPrint('🗑️ [STORY_API] Eliminando imagen del storage: ${image.imageUrl}');
         AppHelper.deleteFile(image.imageUrl);
       }
 
       for (final video in expiredVideos) {
+        debugPrint('🗑️ [STORY_API] Eliminando video del storage: ${video.videoUrl}');
         Future.wait([
           AppHelper.deleteFile(video.videoUrl),
           AppHelper.deleteFile(video.thumbnailUrl),
@@ -483,22 +623,22 @@ abstract class StoryApi {
 
       if (totalValidItems == 0) {
         // Delete entire story if no valid items remain
+        debugPrint('🗑️ [STORY_API] Eliminando historia completa (no quedan items válidos)');
         await storiesRef.doc(story.id).delete();
-        debugPrint('deleteExpiredStoryItems -> entire story deleted');
+        debugPrint('✅ [STORY_API] Historia completa eliminada');
       } else {
         // Update story with only valid items
+        debugPrint('📝 [STORY_API] Actualizando historia con $totalValidItems items válidos');
         await storiesRef.doc(story.id).update({
           'texts': validTexts.map((e) => e.toMap()).toList(),
           'images': validImages.map((e) => e.toMap()).toList(),
           'videos': validVideos.map((e) => e.toMap()).toList(),
           'updatedAt': FieldValue.serverTimestamp(),
         });
-        debugPrint(
-          'deleteExpiredStoryItems -> expired items removed, $totalValidItems items remain',
-        );
+        debugPrint('✅ [STORY_API] Historia actualizada: $totalValidItems items válidos restantes');
       }
     } catch (e) {
-      debugPrint('deleteExpiredStoryItems() -> error: $e');
+      debugPrint('❌ [STORY_API] Error eliminando items expirados: $e');
     }
   }
 }

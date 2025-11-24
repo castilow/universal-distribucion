@@ -338,7 +338,6 @@ final Map<String, String> english = {
   "you_have_blocked_use_tap_the_top_corner_options_to_unblock":
       "You have blocked @firstName. Tap the top corner options to unblock.",
   "type_a_message": "Type a message..",
-  "new": "New",
   "notifications": "Notifications",
   "delete_notifications": "Delete notifications?",
   "no_notifications": "No Notifications",
@@ -383,6 +382,15 @@ final Map<String, String> english = {
   "change_language": "Change language",
   "choose_a_language": "Choose a language",
   "account": "Account",
+  "my_profile": "My profile",
+  "appearance": "Appearance",
+  "change_profile_photo": "Change profile photo",
+  "automatic": "Automatic",
+  "dark_mode": "Dark mode",
+  "light_mode": "Light mode",
+  "translated": "Translated",
+  "show_original": "See original",
+  "show_translation": "See translation",
 
   "your_account_is_blocked": "Your Account is Blocked",
   "please_contact_support_to_request_activation":
@@ -396,14 +404,10 @@ final Map<String, String> english = {
   "please_record_the_audio_to_send": "Please record the Audio to send.",
   "viewer": "viewer",
   "viewers": "viewers",
-  "no_views_yet": "No views yet",
   
   // Additional translations for UI elements
   "Ver resumen general": "View general summary",
   "Administrar tarjetas": "Manage cards",
-  "choose_a_language": "Choose a language",
-  "change_language": "Change language",
-  "change": "Change",
   "search_sections": "Search sections...",
   "exchange_rates": "Exchange\nrates",
   "manage_funds": "Manage funds",
@@ -422,4 +426,8 @@ final Map<String, String> english = {
   "Movimientos Recientes": "Recent Movements",
   "Portfolio Total": "Total Portfolio",
   "Transacciones Recientes": "Recent Transactions",
+  
+  // Authentication errors
+  "failed_to_sign_in_with_google": "Failed to sign in with Google: @error",
+  "failed_to_sign_in_with_apple": "Failed to sign in with Apple: @error",
 };

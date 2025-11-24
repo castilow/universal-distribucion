@@ -28,6 +28,10 @@ class Message {
   GroupUpdate? groupUpdate;
   // Reactions: emoji -> List of user IDs who reacted
   Map<String, List<String>>? reactions;
+  // Translations: language code -> translated text
+  Map<String, String>? translations;
+  String? detectedLanguage;
+  DateTime? translatedAt;
   // This reference help us update this message
   DocumentReference<Map<String, dynamic>>? docRef;
 
@@ -49,6 +53,9 @@ class Message {
     this.replyMessage,
     this.groupUpdate,
     this.reactions,
+    this.translations,
+    this.detectedLanguage,
+    this.translatedAt,
   });
 
   bool get isSender => senderId == AuthController.instance.currentUser.userId;
@@ -63,6 +70,21 @@ class Message {
   bool hasUserReacted(String emoji) {
     final currentUserId = AuthController.instance.currentUser.userId;
     return reactions?[emoji]?.contains(currentUserId) ?? false;
+  }
+
+  // Get translated text for user's language
+  String getTranslatedText(String languageCode) {
+    // Si hay traducción disponible, usarla
+    if (translations != null && translations!.containsKey(languageCode)) {
+      return translations![languageCode]!;
+    }
+    // Si no, devolver el texto original
+    return textMsg;
+  }
+
+  // Check if message has translation for a language
+  bool hasTranslation(String languageCode) {
+    return translations != null && translations!.containsKey(languageCode);
   }
 
   // Add or remove reaction
@@ -103,6 +125,9 @@ class Message {
       replyMessage: replyMessage,
       groupUpdate: groupUpdate,
       reactions: updatedReactions.isEmpty ? null : updatedReactions,
+      translations: translations,
+      detectedLanguage: detectedLanguage,
+      translatedAt: translatedAt,
     );
   }
 
@@ -133,6 +158,16 @@ class Message {
         if (userIds is List) {
           reactions![emoji] = List<String>.from(userIds);
         }
+      });
+    }
+
+    // Parse translations
+    Map<String, String>? translations;
+    if (data['translations'] != null) {
+      final translationsData = data['translations'] as Map<String, dynamic>;
+      translations = {};
+      translationsData.forEach((lang, text) {
+        translations![lang] = text.toString();
       });
     }
 
@@ -171,6 +206,9 @@ class Message {
           : null,
       groupUpdate: GroupUpdate.froMap(data['groupUpdate'] ?? {}),
       reactions: reactions,
+      translations: translations,
+      detectedLanguage: data['detectedLanguage'],
+      translatedAt: data['translatedAt']?.toDate() as DateTime?,
     );
   }
 
@@ -181,6 +219,15 @@ class Message {
       reactionsMap = {};
       reactions!.forEach((emoji, userIds) {
         reactionsMap![emoji] = userIds;
+      });
+    }
+
+    // Convert translations to map for Firestore
+    Map<String, dynamic>? translationsMap;
+    if (translations != null) {
+      translationsMap = {};
+      translations!.forEach((lang, text) {
+        translationsMap![lang] = text;
       });
     }
 
@@ -199,6 +246,9 @@ class Message {
       'replyMessage': replyMessage?.toMap(isGroup: isGroup),
       'groupUpdate': groupUpdate?.toMap(),
       'reactions': reactionsMap,
+      'translations': translationsMap,
+      'detectedLanguage': detectedLanguage,
+      'translatedAt': translatedAt,
     };
   }
 

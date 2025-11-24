@@ -5,10 +5,14 @@ import 'package:chat_messenger/config/theme_config.dart';
 
 import 'package:get/get.dart';
 import 'dart:math' as math;
+import 'dart:io';
 import 'components/story_card.dart';
 import 'controller/story_controller.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:chat_messenger/api/story_api.dart';
+import 'package:chat_messenger/media/helpers/media_helper.dart';
+import 'package:chat_messenger/routes/app_routes.dart';
 import 'story_camera_screen.dart';
 
 class StoriesScreen extends GetView<StoryController> {
@@ -581,6 +585,15 @@ class AddStoryButton extends StatelessWidget {
               children: [
                 _buildStoryOption(
                   context: context,
+                  icon: IconlyBold.edit,
+                  title: 'Historia de Texto',
+                  subtitle: 'Crea una historia con texto',
+                  color: const Color(0xFF8B5CF6),
+                  onTap: () => _openTextStory(context),
+                ),
+                const SizedBox(height: 16),
+                _buildStoryOption(
+                  context: context,
                   icon: IconlyBold.camera,
                   title: 'Grabar Video',
                   subtitle: 'Graba un video para tu story',
@@ -700,6 +713,11 @@ class AddStoryButton extends StatelessWidget {
     );
   }
 
+  Future<void> _openTextStory(BuildContext context) async {
+    Navigator.pop(context); // Cerrar el bottom sheet
+    Get.toNamed(AppRoutes.writeStory);
+  }
+
   Future<void> _openCamera(BuildContext context, {required bool isVideo}) async {
     Navigator.pop(context); // Cerrar el bottom sheet
     
@@ -742,12 +760,196 @@ class AddStoryButton extends StatelessWidget {
     final permission = await Permission.photos.request();
     
     if (permission.isDenied) {
-      // Notificaciones deshabilitadas
+      Get.snackbar(
+        'Permisos necesarios',
+        'Necesitas permisos para acceder a la galería',
+        snackPosition: SnackPosition.BOTTOM,
+      );
       return;
     }
     
-    // TODO: Implementar selección de galería
-    // Notificaciones deshabilitadas
+    // Mostrar opciones: Foto o Video
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        margin: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Seleccionar desde galería',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                children: [
+                  _buildGalleryOption(
+                    context: context,
+                    icon: IconlyBold.image,
+                    title: 'Seleccionar Foto',
+                    subtitle: 'Elige una foto de tu galería',
+                    color: const Color(0xFF000000),
+                    onTap: () => _pickImageFromGallery(context),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildGalleryOption(
+                    context: context,
+                    icon: IconlyBold.video,
+                    title: 'Seleccionar Video',
+                    subtitle: 'Elige un video de tu galería',
+                    color: const Color(0xFFEF4444),
+                    onTap: () => _pickVideoFromGallery(context),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGalleryOption({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: color.withOpacity(0.3),
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: color,
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickImageFromGallery(BuildContext context) async {
+    Navigator.pop(context); // Cerrar el bottom sheet
+    
+    try {
+      final File? imageFile = await MediaHelper.pickMediaFromGallery(
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 90,
+      );
+      
+      if (imageFile != null) {
+        // Subir la historia de imagen
+        await StoryApi.uploadImageStory(imageFile);
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Error al seleccionar la imagen: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  Future<void> _pickVideoFromGallery(BuildContext context) async {
+    Navigator.pop(context); // Cerrar el bottom sheet
+    
+    try {
+      final File? videoFile = await MediaHelper.pickVideo();
+      
+      if (videoFile != null) {
+        // Subir la historia de video
+        await StoryApi.uploadVideoStory(videoFile);
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Error al seleccionar el video: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
   }
 
   @override

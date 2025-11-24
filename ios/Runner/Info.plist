@@ -35,7 +35,8 @@
 				<string>Editor</string>
 				<key>CFBundleURLSchemes</key>
 				<array>
-					<string>com.googleusercontent.apps.320969644964-iiaduh494t13b822pp4q6tag2p5kl4p8</string>
+					<!-- Google Sign-In URL scheme (REVERSED_CLIENT_ID from GoogleService-Info.plist) -->
+					<string>com.googleusercontent.apps.1066544431393-6t8gr15v53lcvohlu4p7l67c6q712of0</string>
 				</array>
 			</dict>
 		</array>
@@ -52,7 +53,8 @@
 			<string>https</string>
 			<string>http</string>
 			<string>google</string>
-			<string>com.googleusercontent.apps.320969644964-iiaduh494t13b822pp4q6tag2p5kl4p8</string>
+			<!-- Allow opening Google Sign-In redirect URL -->
+			<string>com.googleusercontent.apps.1066544431393-6t8gr15v53lcvohlu4p7l67c6q712of0</string>
 		</array>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
@@ -117,5 +119,9 @@
 		</array>
 		<key>UIViewControllerBasedStatusBarAppearance</key>
 		<false/>
+
+		<!-- Google Sign-In Client ID -->
+		<key>GIDClientID</key>
+		<string>1066544431393-6t8gr15v53lcvohlu4p7l67c6q712of0.apps.googleusercontent.com</string>
 	</dict>
 </plist>

@@ -287,6 +287,87 @@ class StoryViewScreen extends StatelessWidget {
             ),
           ),
           
+          // Music info overlay (si hay música en el item actual)
+          Obx(() {
+            final music = controller.currentMusic;
+            if (music == null) return const SizedBox.shrink();
+            
+            return Positioned(
+              bottom: bottomPadding + 80, // Encima de los botones de acción
+              left: horizontalPadding,
+              right: horizontalPadding,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(isTablet ? 20 : 16),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    padding: EdgeInsets.all(isTablet ? 16 : 12),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(isTablet ? 20 : 16),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.music_note,
+                          color: Colors.white,
+                          size: isTablet ? 24 : 20,
+                        ),
+                        SizedBox(width: isTablet ? 12 : 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                music.trackName,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: isTablet ? 16 : 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                music.artistName,
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: isTablet ? 14 : 12,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '30s',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: isTablet ? 12 : 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+          
           // Enhanced bottom actions with glassmorphism
           Positioned(
             bottom: 0,

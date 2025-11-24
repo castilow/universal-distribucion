@@ -94,6 +94,40 @@ abstract class MessageApi {
     }
   }
 
+  // <-- Send message from AI Assistant -->
+  static Future<void> sendAssistantMessage({
+    required Message message,
+    required User receiver,
+  }) async {
+    try {
+      // Get current user instance (the one chatting with the assistant)
+      final User currentUser = AuthController.instance.currentUser;
+      const String assistantUserId = 'klink_ai_assistant';
+
+      // Save message for current user (from assistant)
+      _getCollectionRef(userId1: currentUser.userId, userId2: assistantUserId)
+          .doc(message.msgId)
+          .set(message.toMap(isGroup: false));
+
+      // Save message for assistant's side (from assistant to user)
+      _getCollectionRef(userId1: assistantUserId, userId2: currentUser.userId)
+          .doc(message.msgId)
+          .set(message.toMap(isGroup: false));
+
+      // Save the last chat
+      ChatApi.saveChat(
+        userId1: currentUser.userId,
+        userId2: assistantUserId,
+        message: message,
+      );
+
+      // Debug
+      debugPrint('sendAssistantMessage() -> success');
+    } catch (e) {
+      debugPrint('sendAssistantMessage() -> error: $e');
+    }
+  }
+
   static Future<void> forwardMessage({
     required Message message,
     required List contacts,
@@ -806,6 +840,37 @@ abstract class MessageApi {
     } catch (e) {
       debugPrint('updateMessageReaction() -> error: $e');
       rethrow;
+    }
+  }
+
+  // Update message translation
+  static Future<void> updateMessageTranslation({
+    required String userId,
+    required String receiverId,
+    required String messageId,
+    required Map<String, String> translations,
+  }) async {
+    try {
+      // Update for both users
+      await Future.wait([
+        // Update for current user
+        _getCollectionRef(userId1: userId, userId2: receiverId)
+            .doc(messageId)
+            .update({
+          'translations': translations,
+          'translatedAt': FieldValue.serverTimestamp(),
+        }),
+        // Update for receiver
+        _getCollectionRef(userId1: receiverId, userId2: userId)
+            .doc(messageId)
+            .update({
+          'translations': translations,
+          'translatedAt': FieldValue.serverTimestamp(),
+        }),
+      ]);
+      debugPrint('updateMessageTranslation() -> success');
+    } catch (e) {
+      debugPrint('updateMessageTranslation() -> error: $e');
     }
   }
 }

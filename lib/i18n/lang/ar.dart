@@ -288,6 +288,15 @@ final Map<String, String> arabic = {
   "choose_a_language": "اختر لغة",
   "change_language": "تغيير اللغة",
   "change": "تغيير",
+  "my_profile": "ملفي الشخصي",
+  "appearance": "المظهر",
+  "change_profile_photo": "تغيير صورة الملف الشخصي",
+  "automatic": "تلقائي",
+  "dark_mode": "الوضع الداكن",
+  "light_mode": "الوضع الفاتح",
+  "translated": "مترجم",
+  "show_original": "عرض الأصلي",
+  "show_translation": "عرض الترجمة",
   
   // Additional translations for UI elements
   "Ver resumen general": "عرض الملخص العام",

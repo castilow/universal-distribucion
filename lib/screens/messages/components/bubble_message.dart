@@ -20,6 +20,7 @@ import 'bubbles/audio_message.dart';
 import 'forwarded_badge.dart';
 import 'read_time_status.dart';
 import 'message_actions_overlay.dart';
+import 'package:chat_messenger/controllers/preferences_controller.dart';
 
 class BubbleMessage extends StatelessWidget {
   const BubbleMessage({
@@ -56,14 +57,13 @@ class BubbleMessage extends StatelessWidget {
         isGroup ? group!.getMemberProfile(message.senderId) : user!;
 
     // Background color based on sender and theme
-    // - Recibidos: blanco
-    // - Enviados: verde claro
+    // Usar colores personalizados si existen, sino usar los por defecto
+    final PreferencesController prefController = Get.find();
     final Color backgroundColor = isSender
-        ? const Color(0xFFDCF8C6)
-        : Colors.white;
-    final Color senderColor = isDarkMode
-        ? Colors.white
-        : Colors.black87;
+        ? prefController.getSentBubbleColor()
+        : prefController.getReceivedBubbleColor(isDarkMode);
+    // Calcular color de texto automático basado en el color de fondo
+    final Color textColor = PreferencesController.getContrastTextColor(backgroundColor);
 
     return Obx(() {
       final bool isMultiSelectMode = controller.isMultiSelectMode.value;
@@ -171,42 +171,53 @@ class BubbleMessage extends StatelessWidget {
                                             senderUser.fullname,
                                             style: TextStyle(
                                               fontWeight: FontWeight.w600,
-                                              color: senderColor,
+                                              color: textColor,
                                               fontSize: 13,
                                             ),
                                           ),
                                         ],
                                       ),
                                     ),
-                                  _showMessageContent(profileUrl),
+                                  _showMessageContent(profileUrl, backgroundColor),
                                 ],
                               ),
                             )
-                          : Container(
+                          : Obx(() {
+                              final double radius = prefController.customBubbleRadius.value;
+                              return Container(
                               margin: EdgeInsets.only(
-                                top: 8,
+                                top: 4, // Tighter spacing
                                 left: isSender ? (isMultiSelectMode ? 8 : 50) : (isMultiSelectMode ? 8 : 0),
                                 right: isSender ? 0 : 50,
                               ),
-                              padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+                              padding: const EdgeInsets.fromLTRB(10, 6, 10, 6), // Slightly more compact
                               decoration: BoxDecoration(
-                                color: isSelected ? backgroundColor.withOpacity(0.8) : backgroundColor,
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(!isSender ? 18 : 20),
-                                  topRight: Radius.circular(isSender ? 18 : 20),
-                                  bottomLeft: const Radius.circular(20),
-                                  bottomRight: const Radius.circular(20),
-                                ),
-                                boxShadow: isDarkMode
+                                gradient: (isSender && !prefController.hasCustomBubbleColors)
+                                    ? const LinearGradient(
+                                        colors: [
+                                          Color(0xFF00F7FF), // Cyan Premium
+                                          Color(0xFF00C6FF), // Blue Cyan
+                                        ],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      )
+                                    : null,
+                                color: (isSender && !prefController.hasCustomBubbleColors)
                                     ? null
-                                    : [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.05),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                          spreadRadius: 0,
-                                        ),
-                                      ],
+                                    : backgroundColor,
+                                borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(isSender ? radius : 16),
+                                    topRight: Radius.circular(isSender ? 16 : radius),
+                                    bottomLeft: Radius.circular(radius),
+                                    bottomRight: Radius.circular(radius),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.08),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
                               child: Stack(
                                 children: [
@@ -239,7 +250,7 @@ class BubbleMessage extends StatelessWidget {
                                                   senderUser.fullname,
                                                   style: TextStyle(
                                                     fontWeight: FontWeight.w600,
-                                                    color: senderColor,
+                                                    color: textColor,
                                                     fontSize: 13,
                                                   ),
                                                 ),
@@ -264,7 +275,7 @@ class BubbleMessage extends StatelessWidget {
                                             onTapReply: () => controller.navigateToReplyMessage(message.replyMessage!),
                                           ),
                                         ),
-                                      _showMessageContent(profileUrl),
+                                      _showMessageContent(profileUrl, backgroundColor),
                                     ],
                                   ),
                                   if (message.type != MessageType.text &&
@@ -281,7 +292,8 @@ class BubbleMessage extends StatelessWidget {
                                     ),
                                 ],
                               ),
-                            ),
+                            );
+                          }),
                     ),
                 ),
               ),
@@ -293,14 +305,14 @@ class BubbleMessage extends StatelessWidget {
   }
 
   // Handle message type
-  Widget _showMessageContent(String profileUrl) {
+  Widget _showMessageContent(String profileUrl, Color backgroundColor) {
     final bool isGroup = group != null;
     
     // Check type
     switch (message.type) {
       case MessageType.text:
         // Show text msg
-        return TextMessage(message);
+        return TextMessage(message, backgroundColor: backgroundColor);
 
       case MessageType.image:
         // Show image msg

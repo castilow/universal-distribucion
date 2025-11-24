@@ -1,9 +1,5 @@
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
- 
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:chat_messenger/controllers/auth_controller.dart';
@@ -67,6 +63,8 @@ abstract class AuthApi {
     required String password,
   }) async {
     try {
+      debugPrint('🔐 signInWithEmailAndPassword() -> Iniciando...');
+      debugPrint('🔐 Email: $email');
       DialogHelper.showProcessingDialog();
       
       final UserCredential userCredential =
@@ -74,25 +72,38 @@ abstract class AuthApi {
         email: email,
         password: password,
       );
+      debugPrint('🔐 signInWithEmailAndPassword() -> Autenticación exitosa');
+      
       // Get User
       User user = userCredential.user!;
+      debugPrint('🔐 Usuario ID: ${user.uid}');
+      debugPrint('🔐 Email verificado: ${user.emailVerified}');
 
       // Check verification status
       if (!user.emailVerified) {
+        debugPrint('🔐 Email no verificado, enviando verificación...');
         // Send email verification if not already sent
         await sendEmailVerification(user);
         DialogHelper.closeDialog();
         return;
       }
 
+      debugPrint('🔐 Email verificado, continuando...');
+
       // Set login provider
       _authController.provider = LoginProvider.email;
+      debugPrint('🔐 Provider establecido: email');
 
       // Check account in database
+      debugPrint('🔐 Verificando cuenta en base de datos...');
       await _authController.checkUserAccount();
+      debugPrint('🔐 checkUserAccount() completado');
       
       DialogHelper.closeDialog();
-    } catch (e) {
+      debugPrint('🔐 signInWithEmailAndPassword() -> ✅ Éxito');
+    } catch (e, stackTrace) {
+      debugPrint('🔐 signInWithEmailAndPassword() -> ❌ ERROR: $e');
+      debugPrint('🔐 Stack trace: $stackTrace');
       DialogHelper.closeDialog();
       DialogHelper.showSnackbarMessage(
         SnackMsgType.error,
@@ -137,6 +148,7 @@ abstract class AuthApi {
     try {
       await Get.deleteAll(force: true);
       await _firebaseAuth.signOut();
+      await GoogleSignIn().signOut(); // Sign out from Google
       Get.offAllNamed(AppRoutes.splash);
 
       debugPrint('signOut() -> success');
@@ -145,5 +157,51 @@ abstract class AuthApi {
     }
   }
 
-  // Sign-in con Google eliminado por solicitud
+  /// Sign in with Google
+  static Future<void> signInWithGoogle() async {
+    try {
+      DialogHelper.showProcessingDialog();
+
+      // Trigger the authentication flow
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+
+      if (googleUser == null) {
+        // User canceled the sign-in
+        DialogHelper.closeDialog();
+        return;
+      }
+
+      // Obtain the auth details from the request
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      // Create a new credential
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Sign in to Firebase with the Google credential
+      await _firebaseAuth.signInWithCredential(credential);
+
+      // Set login provider
+      _authController.provider = LoginProvider.google;
+
+      // Check account in database
+      await _authController.checkUserAccount();
+
+      DialogHelper.closeDialog();
+
+      debugPrint('signInWithGoogle() -> success');
+    } catch (e) {
+      DialogHelper.closeDialog();
+      DialogHelper.showSnackbarMessage(
+        SnackMsgType.error,
+        "failed_to_sign_in_with_google".trParams(
+          {'error': e.toString()},
+        ),
+      );
+      debugPrint('signInWithGoogle() -> error: $e');
+    }
+  }
+
 }

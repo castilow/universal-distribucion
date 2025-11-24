@@ -34,6 +34,8 @@ import 'package:chat_messenger/tabs/profile/profile_view_screen.dart';
 import 'package:chat_messenger/tabs/profile/profile_screen.dart';
 import 'package:chat_messenger/screens/wallet/wallet_screen.dart';
 import 'package:chat_messenger/screens/appearance_screen.dart';
+import 'package:chat_messenger/screens/bubble_color_picker_screen.dart';
+import 'package:chat_messenger/screens/text_size_screen.dart';
 
 import 'package:chat_messenger/screens/price_screen.dart';
 import 'package:chat_messenger/screens/woop_dashboard_screen.dart';
@@ -91,48 +93,47 @@ abstract class AppPages {
       name: AppRoutes.home,
       binding: HomeBinding(),
       page: () => const HomeScreen(),
-      transition: Transition.noTransition,
-      transitionDuration: Duration.zero,
+
     ),
     GetPage(
       name: AppRoutes.wallet,
       page: () => const WalletScreen(),
-      transition: Transition.rightToLeft,
+
     ),
     GetPage(
       name: AppRoutes.price,
       page: () => const PriceScreen(),
-      transition: Transition.rightToLeft,
+
     ),
     GetPage(
       name: AppRoutes.woopDashboard,
       page: () => const WoopDashboardScreen(),
-      transition: Transition.rightToLeft,
+
     ),
     GetPage(
       name: AppRoutes.ethDashboard,
       page: () => const EthDashboardScreen(),
-      transition: Transition.rightToLeft,
+
     ),
     GetPage(
       name: AppRoutes.dashboard,
       page: () => const DashboardScreen(),
-      transition: Transition.rightToLeft,
+
     ),
     GetPage(
       name: AppRoutes.investment,
       page: () => const InvestmentScreen(),
-      transition: Transition.rightToLeft,
+
     ),
     GetPage(
       name: AppRoutes.sendEth,
       page: () => const SendEthScreen(),
-      transition: Transition.rightToLeft,
+
     ),
     GetPage(
       name: AppRoutes.receiveEth,
       page: () => const ReceiveEthScreen(),
-      transition: Transition.rightToLeft,
+
     ),
     GetPage(name: AppRoutes.recordVideo, page: () => RecordVideoScreen()),
     GetPage(
@@ -146,9 +147,8 @@ abstract class AppPages {
         );
       },
       // Transición de apertura del chat deslizándose hacia la izquierda (entrada desde la derecha)
-      transition: Transition.rightToLeft,
-      transitionDuration: const Duration(milliseconds: 200),
-      curve: Curves.easeOutCubic,
+
+
     ),
     GetPage(name: AppRoutes.session, page: () => const SesssionScreen()),
     GetPage(name: AppRoutes.about, page: () => const AboutScreen()),
@@ -222,17 +222,27 @@ abstract class AppPages {
     GetPage(
       name: AppRoutes.globalSearch,
       page: () => const GlobalSearchScreen(),
-      transition: Transition.fadeIn,
+
     ),
     GetPage(
       name: AppRoutes.call,
       page: () => const CallScreen(),
-      transition: Transition.fadeIn,
+
     ),
     GetPage(
       name: AppRoutes.appearance,
       page: () => const AppearanceScreen(),
-      transition: Transition.rightToLeft,
+
+    ),
+    GetPage(
+      name: AppRoutes.bubbleColorPicker,
+      page: () => const BubbleColorPickerScreen(),
+
+    ),
+    GetPage(
+      name: AppRoutes.textSize,
+      page: () => const TextSizeScreen(),
+
     ),
   ];
 }

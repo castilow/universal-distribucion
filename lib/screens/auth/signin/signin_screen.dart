@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_iconly/flutter_iconly.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:chat_messenger/components/app_logo.dart';
 import 'package:chat_messenger/screens/auth/signin/controller/signin_controller.dart';
@@ -7,6 +10,7 @@ import 'package:chat_messenger/helpers/app_helper.dart';
 import 'package:chat_messenger/routes/app_routes.dart';
 import 'package:chat_messenger/config/theme_config.dart';
 import 'package:chat_messenger/controllers/preferences_controller.dart';
+import 'package:chat_messenger/api/auth_api.dart';
 import 'dart:ui';
  
 
@@ -300,7 +304,53 @@ class SignInScreen extends GetView<SignInController> {
                         ),
                       ),
 
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 32),
+
+                      // Divider with "O"
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Divider(
+                              color: Colors.grey[600],
+                              thickness: 1,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'O',
+                              style: TextStyle(
+                                color: Colors.grey[400],
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Divider(
+                              color: Colors.grey[600],
+                              thickness: 1,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      // Social Sign In Buttons
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Google Sign In
+                          _buildSocialButton(
+                            onTap: () => AuthApi.signInWithGoogle(),
+                            icon: 'assets/icons/google.svg',
+                            label: 'Google',
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 32),
 
                       // Sign Up Link
                       Row(
@@ -386,6 +436,53 @@ class SignInScreen extends GetView<SignInController> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Build social sign-in button
+  Widget _buildSocialButton({
+    required VoidCallback onTap,
+    required String icon,
+    required String label,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 70,
+        height: 70,
+        decoration: BoxDecoration(
+          color: darkPrimaryContainer,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.grey[700]!,
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Center(
+          child: icon.contains('apple')
+              ? SvgPicture.asset(
+                  icon,
+                  width: 32,
+                  height: 32,
+                  colorFilter: const ColorFilter.mode(
+                    Colors.white,
+                    BlendMode.srcIn,
+                  ),
+                )
+              : SvgPicture.asset(
+                  icon,
+                  width: 32,
+                  height: 32,
+                ),
+        ),
       ),
     );
   }

@@ -158,7 +158,16 @@ final Map<String, String> spanish = {
   "speaker": "Altavoz",
   "camera": "Cámara",
   "switch_camera": "Cambiar cámara",
-  "settings": "Configuración",
+  "settings": "Ajustes",
+  "my_profile": "Mi perfil",
+  "appearance": "Apariencia",
+  "change_profile_photo": "Cambiar foto de perfil",
+  "automatic": "Automático",
+  "dark_mode": "Modo Oscuro",
+  "light_mode": "Modo Claro",
+  "translated": "Traducido",
+  "show_original": "Ver original",
+  "show_translation": "Ver traducción",
   "dark_theme": "Tema oscuro",
   "account": "Cuenta",
   "privacy": "Privacidad",
@@ -329,4 +338,8 @@ final Map<String, String> spanish = {
   "Movimientos Recientes": "Movimientos Recientes",
   "Portfolio Total": "Portfolio Total",
   "Transacciones Recientes": "Transacciones Recientes",
+  
+  // Authentication errors
+  "failed_to_sign_in_with_google": "Error al iniciar sesión con Google: @error",
+  "failed_to_sign_in_with_apple": "Error al iniciar sesión con Apple: @error",
 }; 

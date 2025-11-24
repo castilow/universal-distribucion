@@ -6,6 +6,7 @@ import 'package:chat_messenger/models/story/submodels/seen_by.dart';
 import 'package:chat_messenger/models/story/submodels/story_text.dart' as txt;
 import 'package:chat_messenger/models/story/submodels/story_image.dart' as img;
 import 'package:chat_messenger/models/story/submodels/story_video.dart' as vdo;
+import 'package:chat_messenger/models/story/submodels/story_music.dart';
 import 'package:get/get.dart';
 import 'package:story_view/story_view.dart';
 
@@ -22,6 +23,19 @@ class StoryViewController extends GetxController {
   dynamic get storyItem => items[index.value];
   DateTime get createdAt => items[index.value].createdAt;
   List<SeenBy> get seenByList => items[index.value].seenBy;
+  
+  // Obtener música del item actual
+  StoryMusic? get currentMusic {
+    final item = storyItem;
+    if (item is txt.StoryText) {
+      return item.music;
+    } else if (item is img.StoryImage) {
+      return item.music;
+    } else if (item is vdo.StoryVideo) {
+      return item.music;
+    }
+    return null;
+  }
 
   void getStoryItemIndex(int position) {
      index.value = position;

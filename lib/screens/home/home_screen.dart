@@ -24,7 +24,9 @@ import '../../components/audio_player_bar.dart';
 import '../../components/audio_recorder_overlay.dart';
 import '../messages/controllers/message_controller.dart';
 import 'package:chat_messenger/components/global_search_bar.dart';
+import 'package:chat_messenger/components/klink_ai_button.dart';
 import 'package:chat_messenger/components/common_header.dart';
+import 'dart:ui' as ui;
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -36,22 +38,15 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with WidgetsBindingObserver, TickerProviderStateMixin {
   late AnimationController _animationController;
-  late AnimationController _sessionButtonController;
+  late AnimationController _sessionBtnController;
   late AnimationController _calendarButtonController;
   late AnimationController _addButtonController;
-  late AnimationController _siriOrbController;
-  late AnimationController _siriWave1Controller;
-  late AnimationController _siriWave2Controller;
-  late AnimationController _siriPulseController;
+
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _sessionButtonScale;
   late Animation<double> _calendarButtonScale;
   late Animation<double> _addButtonScale;
-  late Animation<double> _siriOrbRotation;
-  late Animation<double> _siriWave1;
-  late Animation<double> _siriWave2;
-  late Animation<double> _siriPulse;
 
   bool _isSessionPressed = false;
   bool _isCalendarPressed = false;
@@ -69,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen>
       vsync: this,
     );
     
-    _sessionButtonController = AnimationController(
+    _sessionBtnController = AnimationController(
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
@@ -84,26 +79,7 @@ class _HomeScreenState extends State<HomeScreen>
       vsync: this,
     );
 
-    // Controladores para el orb estilo Siri
-    _siriOrbController = AnimationController(
-      duration: const Duration(seconds: 6),
-      vsync: this,
-    );
 
-    _siriWave1Controller = AnimationController(
-      duration: const Duration(seconds: 3),
-      vsync: this,
-    );
-
-    _siriWave2Controller = AnimationController(
-      duration: const Duration(seconds: 4),
-      vsync: this,
-    );
-
-    _siriPulseController = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
@@ -118,7 +94,7 @@ class _HomeScreenState extends State<HomeScreen>
         );
 
     _sessionButtonScale = Tween<double>(begin: 1.0, end: 1.2).animate(
-      CurvedAnimation(parent: _sessionButtonController, curve: Curves.easeInOut),
+      CurvedAnimation(parent: _sessionBtnController, curve: Curves.easeInOut),
     );
     
     _calendarButtonScale = Tween<double>(begin: 1.0, end: 1.2).animate(
@@ -129,30 +105,11 @@ class _HomeScreenState extends State<HomeScreen>
       CurvedAnimation(parent: _addButtonController, curve: Curves.easeInOut),
     );
 
-    // Animaciones para el orb estilo Siri
-    _siriOrbRotation = Tween<double>(begin: 0.0, end: 2 * math.pi).animate(
-      CurvedAnimation(parent: _siriOrbController, curve: Curves.linear),
-    );
 
-    _siriWave1 = Tween<double>(begin: 0.0, end: 2 * math.pi).animate(
-      CurvedAnimation(parent: _siriWave1Controller, curve: Curves.easeInOut),
-    );
-
-    _siriWave2 = Tween<double>(begin: 0.0, end: 2 * math.pi).animate(
-      CurvedAnimation(parent: _siriWave2Controller, curve: Curves.easeInOut),
-    );
-
-    _siriPulse = Tween<double>(begin: 0.8, end: 1.2).animate(
-      CurvedAnimation(parent: _siriPulseController, curve: Curves.easeInOut),
-    );
 
     _animationController.forward();
     
-    // Iniciar animaciones continuas del orb Siri
-    _siriOrbController.repeat();
-    _siriWave1Controller.repeat(reverse: true);
-    _siriWave2Controller.repeat(reverse: true);
-    _siriPulseController.repeat(reverse: true);
+
 
     // Init other controllers
     Get.put(ReportController(), permanent: true);
@@ -174,13 +131,10 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void dispose() {
     _animationController.dispose();
-    _sessionButtonController.dispose();
+    _sessionBtnController.dispose();
     _calendarButtonController.dispose();
     _addButtonController.dispose();
-    _siriOrbController.dispose();
-    _siriWave1Controller.dispose();
-    _siriWave2Controller.dispose();
-    _siriPulseController.dispose();
+
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -202,8 +156,8 @@ class _HomeScreenState extends State<HomeScreen>
   // END
 
   void _animateSessionButton() {
-    _sessionButtonController.forward().then((_) {
-      _sessionButtonController.reverse();
+    _sessionBtnController.forward().then((_) {
+      _sessionBtnController.reverse();
     });
   }
 
@@ -238,7 +192,9 @@ class _HomeScreenState extends State<HomeScreen>
 
       return Scaffold(
         extendBodyBehindAppBar: true,
-        appBar: PreferredSize(
+        appBar: pageIndex == 4 
+          ? null 
+          : PreferredSize(
           preferredSize: const Size.fromHeight(80),
           child: SafeArea(
             child: Container(
@@ -270,22 +226,31 @@ class _HomeScreenState extends State<HomeScreen>
                     const SizedBox(width: 12),
                   ],
                   
-                  // Search field
+                  // Search field or Title
                   Expanded(
-                    child: GlobalSearchBar(
-                      key: _searchBarKey,
-                      showInHeader: true,
-                      onSearchActivated: () {
-                        setState(() {
-                          _isSearchActive = true;
-                        });
-                      },
-                      onSearchDeactivated: () {
-                        setState(() {
-                          _isSearchActive = false;
-                        });
-                      },
-                    ),
+                    child: pageIndex == 0 
+                      ? Text(
+                          'Chats',
+                          style: TextStyle(
+                            color: isDarkMode ? Colors.white : Colors.black,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )
+                      : GlobalSearchBar(
+                          key: _searchBarKey,
+                          showInHeader: true,
+                          onSearchActivated: () {
+                            setState(() {
+                              _isSearchActive = true;
+                            });
+                          },
+                          onSearchDeactivated: () {
+                            setState(() {
+                              _isSearchActive = false;
+                            });
+                          },
+                        ),
                   ),
                   
                   // Plus button (oculto cuando búsqueda está activa)
@@ -295,35 +260,7 @@ class _HomeScreenState extends State<HomeScreen>
                     // Plus button (solo en página de chats - pageIndex == 0)
                     if (pageIndex == 0) ...[
                       const SizedBox(width: 12),
-                      GestureDetector(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          _showNewChatMenu(context, isDarkMode);
-                        },
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: isDarkMode
-                                ? const Color(0xFF1C1C1E)
-                                : const Color(0xFFF2F2F7),
-                            borderRadius: BorderRadius.circular(12),
-                            border: isDarkMode
-                                ? Border.all(
-                                    color: const Color(0xFF404040).withOpacity(0.6),
-                                    width: 1,
-                                  )
-                                : null,
-                          ),
-                          child: Icon(
-                            Icons.add,
-                            color: isDarkMode
-                                ? const Color(0xFF9CA3AF)
-                                : const Color(0xFF64748B),
-                            size: 18,
-                          ),
-                        ),
-                      ),
+                      const KlinkAIButton(),
                     ],
                     
                     const SizedBox(width: 12),
@@ -365,6 +302,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
         body: SafeArea(
+          top: pageIndex != 4,
           child: Stack(
             children: [
               // Contenido principal o resultados de búsqueda
@@ -432,89 +370,109 @@ class _HomeScreenState extends State<HomeScreen>
           ? null 
           : Container(
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: isDarkMode
-                      ? [
-                          const Color(0xFF000000).withOpacity(0.95),
-                          const Color(0xFF1A1A1A).withOpacity(0.98),
-                        ]
-                      : [
-                          const Color(0xFFFFFFFF).withOpacity(0.95),
-                          const Color(0xFFF8FAFC),
-                        ],
+                color: isDarkMode 
+                    ? const Color(0xFF0F172A).withOpacity(0.85) // Slate 900 with opacity
+                    : const Color(0xFFFFFFFF).withOpacity(0.85),
+                border: Border(
+                  top: BorderSide(
+                    color: isDarkMode 
+                        ? Colors.white.withOpacity(0.05) 
+                        : Colors.black.withOpacity(0.05),
+                    width: 0.5,
+                  ),
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: isDarkMode
-                        ? Colors.black.withOpacity(0.5)
-                        : Colors.grey.withOpacity(0.1),
+                        ? Colors.black.withOpacity(0.4)
+                        : const Color(0xFF64748B).withOpacity(0.1),
                     blurRadius: 20,
                     offset: const Offset(0, -5),
-                    spreadRadius: 0,
                   ),
                 ],
               ),
-              child: Theme(
-                data: Theme.of(context).copyWith(
-                  splashColor: Colors.transparent,
-                  highlightColor: Colors.transparent,
-                  hoverColor: Colors.transparent,
-                  focusColor: Colors.transparent,
-                ),
-                child: BottomNavigationBar(
-                  backgroundColor: Colors.transparent,
-                  elevation: 0,
-                  currentIndex: pageIndex,
-                  onTap: (int index) {
-                    HapticFeedback.selectionClick();
-                    homeController.pageIndex.value = index;
-                  },
-                  type: BottomNavigationBarType.fixed,
-                  selectedLabelStyle: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
+              child: ClipRRect(
+                // Add blur effect
+                child: BackdropFilter(
+                  filter:  ui.ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                  child: Theme(
+                    data: Theme.of(context).copyWith(
+                      splashColor: Colors.transparent,
+                      highlightColor: Colors.transparent,
+                      hoverColor: Colors.transparent,
+                      focusColor: Colors.transparent,
+                    ),
+                    child: BottomNavigationBar(
+                      backgroundColor: Colors.transparent,
+                      elevation: 0,
+                      currentIndex: pageIndex,
+                      onTap: (int index) {
+                        HapticFeedback.selectionClick();
+                        homeController.pageIndex.value = index;
+                      },
+                      type: BottomNavigationBarType.fixed,
+                      selectedLabelStyle: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                        letterSpacing: -0.2,
+                      ),
+                      unselectedLabelStyle: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 11,
+                        letterSpacing: -0.2,
+                      ),
+                      selectedItemColor: const Color(0xFF00E5FF), // Premium Cyan
+                      unselectedItemColor: isDarkMode
+                          ? const Color(0xFF94A3B8) // Slate 400
+                          : const Color(0xFF64748B), // Slate 500
+                      items: [
+                        // Chats
+                        BottomNavigationBarItem(
+                          label: 'chats'.tr,
+                          icon: BadgeIndicator(
+                            icon: pageIndex == 0 ? IconlyBold.chat : IconlyLight.chat,
+                            isNew: chatController.newMessage,
+                          ),
+                        ),
+                        // Contacts
+                        BottomNavigationBarItem(
+                          label: 'contacts'.tr,
+                          icon: Icon(
+                            pageIndex == 1 ? IconlyBold.user2 : IconlyLight.user2,
+                          ),
+                        ),
+                        // Stories
+                        BottomNavigationBarItem(
+                          label: '',
+                          icon: Stack(
+                            children: [
+                              Image.asset(
+                                'assets/images/origina.gif',
+                                width: 45,
+                                height: 45,
+                              ),
+                              if (storyController.hasUnviewedStories)
+                                const Positioned(right: 0, child: Badge(smallSize: 8)),
+                            ],
+                          ),
+                        ),
+                        // Calls
+                        BottomNavigationBarItem(
+                          label: 'calls'.tr,
+                          icon: Icon(
+                            pageIndex == 3 ? IconlyBold.call : IconlyLight.call,
+                          ),
+                        ),
+                        // Settings
+                        BottomNavigationBarItem(
+                          label: 'settings'.tr,
+                          icon: Icon(
+                            pageIndex == 4 ? IconlyBold.setting : IconlyLight.setting,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  unselectedLabelStyle: const TextStyle(
-                    fontWeight: FontWeight.w500,
-                    fontSize: 11,
-                  ),
-                  selectedItemColor: const Color(0xFF00F7FF), // Cyan brillante
-                  unselectedItemColor: isDarkMode
-                      ? const Color(0xFF9CA3AF)
-                      : const Color(0xFF64748B),
-                  items: [
-                    // Chats
-                    BottomNavigationBarItem(
-                      label: 'chats'.tr,
-                      icon: BadgeIndicator(
-                        icon: pageIndex == 0 ? IconlyBold.chat : IconlyLight.chat,
-                        isNew: chatController.newMessage,
-                      ),
-                    ),
-                    // Contacts
-                    BottomNavigationBarItem(
-                      label: 'contacts'.tr,
-                      icon: Icon(
-                        pageIndex == 1 ? IconlyBold.user2 : IconlyLight.user2,
-                      ),
-                    ),
-                    // Calls
-                    BottomNavigationBarItem(
-                      label: 'calls'.tr,
-                      icon: Icon(
-                        pageIndex == 2 ? IconlyBold.call : IconlyLight.call,
-                      ),
-                    ),
-                    // Settings
-                    BottomNavigationBarItem(
-                      label: 'settings'.tr,
-                      icon: Icon(
-                        pageIndex == 3 ? IconlyBold.setting : IconlyLight.setting,
-                      ),
-                    ),
-                  ],
                 ),
               ),
             ),
@@ -652,66 +610,7 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
-  // Nuevo widget para el orb estilo Siri - MÁS GRANDE Y HACIA ABAJO
-  Widget _buildSiriOrb(bool hasUnviewedStories) {
-    return Transform.translate(
-      offset: const Offset(0, 8), // Mover hacia abajo
-      child: Container(
-        width: 48, // Más grande (era 32)
-        height: 48, // Más grande (era 32)
-        child: Stack(
-          children: [
-            // Imagen del orb GIF con más zoom
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: Transform.scale(
-                  scale: 1.5, // Zoom al GIF
-                  child: Image.asset(
-                    'assets/images/orb.gif',
-                    width: 48,
-                    height: 48,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-            ),
 
-            // Badge indicator si hay historias no vistas
-            if (hasUnviewedStories)
-              Positioned(
-                top: 2,
-                right: 2,
-                child: Container(
-                  width: 14,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEF4444),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white,
-                      width: 2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFEF4444).withOpacity(0.6),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildSearchBar(bool isDarkMode, User currentUser) {
     return Container(

@@ -43,12 +43,23 @@ service cloud.firestore {
 
       // User's chats - allow access to both participants
       match /Chats/{chatId} {
-        allow read, write: if isDirectChatParticipant(userId, chatId);
+        allow read, write: if isDirectChatParticipant(userId, chatId) || 
+          (signedIn() && chatId == 'klink_ai_assistant' && request.auth.uid == userId);
 
         // Messages in chats - allow access to chat participants
         match /Messages/{messageId} {
-          allow read, write: if isDirectChatParticipant(userId, chatId);
+          allow read, write: if isDirectChatParticipant(userId, chatId) || 
+            (signedIn() && chatId == 'klink_ai_assistant' && request.auth.uid == userId);
         }
+      }
+      
+      // Special handling for AI Assistant: allow users to write messages in assistant's chat structure
+      match /Users/klink_ai_assistant/Chats/{chatId}/Messages/{messageId} {
+        allow read, write: if signedIn() && request.auth.uid == chatId;
+      }
+      
+      match /Users/klink_ai_assistant/Chats/{chatId} {
+        allow read, write: if signedIn() && request.auth.uid == chatId;
       }
 
       // Contacts collection - sólo propietario
@@ -88,6 +99,12 @@ service cloud.firestore {
     match /Reports/{reportId} {
       allow create: if signedIn();
       allow read: if false; // Only admins should read reports
+    }
+    
+    // Special case: AI Assistant user document (must be outside Users/{userId} match)
+    match /Users/klink_ai_assistant {
+      allow read: if signedIn();
+      allow write: if false; // Only system can write
     }
   }
 }

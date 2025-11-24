@@ -2,13 +2,15 @@ import 'package:chat_messenger/config/theme_config.dart';
 import 'package:flutter/material.dart';
 
 BoxDecoration getBubbleDecoration(bool isSender) {
+  final double radius = PreferencesController.instance.customBubbleRadius.value;
+  
   return BoxDecoration(
     color: isSender ? primaryColor.withOpacity(.2) : greyLight,
     borderRadius: BorderRadius.only(
-      topLeft: Radius.circular(!isSender ? 2 : 15),
-      topRight: const Radius.circular(15),
-      bottomLeft: const Radius.circular(15),
-      bottomRight: Radius.circular(!isSender ? 15 : 2),
+      topLeft: Radius.circular(!isSender ? 2 : radius),
+      topRight: Radius.circular(radius),
+      bottomLeft: Radius.circular(radius),
+      bottomRight: Radius.circular(!isSender ? radius : 2),
     ),
   );
 }

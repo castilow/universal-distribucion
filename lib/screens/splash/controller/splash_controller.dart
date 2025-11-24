@@ -19,7 +19,13 @@ const bool kForceDebugAppCheckMode =
 
 class SplashController extends GetxController {
   // Auth controller: se instancia SOLO después de Firebase.initializeApp
-  late final AuthController auth;
+  AuthController get auth {
+    if (Get.isRegistered<AuthController>()) {
+      return Get.find<AuthController>();
+    } else {
+      return Get.put(AuthController(), permanent: true);
+    }
+  }
 
   @override
   void onInit() {
@@ -40,17 +46,17 @@ class SplashController extends GetxController {
       }
 
       if (kEnableFirebaseAppCheck) {
-        await FirebaseAppCheck.instance.activate(
+      await FirebaseAppCheck.instance.activate(
           appleProvider:
               kForceDebugAppCheckMode ? AppleProvider.debug : AppleProvider.appAttestWithDeviceCheckFallback,
           androidProvider:
               kForceDebugAppCheckMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
-          webProvider: ReCaptchaV3Provider('unused-for-mobile'),
-        );
-        await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(true);
+        webProvider: ReCaptchaV3Provider('unused-for-mobile'),
+      );
+      await FirebaseAppCheck.instance.setTokenAutoRefreshEnabled(true);
         if (kForceDebugAppCheckMode) {
-          try {
-            final token = await FirebaseAppCheck.instance.getToken(true);
+      try {
+        final token = await FirebaseAppCheck.instance.getToken(true);
             debugPrint(
               '🔥 AppCheck token (para verificación): ${token != null ? token.substring(0, 12) : 'null'}...',
             );
@@ -64,7 +70,8 @@ class SplashController extends GetxController {
       await FirebaseMessagingService.diagnoseFCMToken();
 
       // Registrar AuthController ahora que Firebase está listo
-      auth = Get.put(AuthController(), permanent: true);
+      // El getter se encarga de obtener o crear la instancia
+      final _ = auth;
 
       // Servicios base en paralelo
       final prefsController = Get.put(PreferencesController(), permanent: true);
@@ -105,7 +112,7 @@ class SplashController extends GetxController {
     } catch (_) {
       // En caso de error, intenta igualmente ir al flujo de auth
       try {
-        auth = Get.put(AuthController(), permanent: true);
+        // El getter se encarga de obtener o crear la instancia
         await auth.checkUserAccount();
       } catch (e) {
         rethrow;

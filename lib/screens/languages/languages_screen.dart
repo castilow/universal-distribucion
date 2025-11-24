@@ -64,7 +64,7 @@ class _LanguagesScreenState extends State<LanguagesScreen> {
                     'assets/flags/${entry.key}.png',
                     width: 32,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, e, __) =>
+                    errorBuilder: (context, error, stackTrace) =>
                         const Icon(Icons.translate, size: 25),
                   ),
                   title: Text(langName),

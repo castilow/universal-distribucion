@@ -5,6 +5,9 @@ import 'package:chat_messenger/api/story_api.dart';
 import 'package:chat_messenger/components/floating_button.dart';
 import 'package:chat_messenger/components/loading_indicator.dart';
 import 'package:chat_messenger/helpers/dialog_helper.dart';
+import 'package:chat_messenger/tabs/stories/components/story_settings_bottom_sheet.dart';
+import 'package:chat_messenger/tabs/stories/components/music_search_screen.dart';
+import 'package:chat_messenger/models/story/submodels/story_music.dart';
 import 'package:get/get.dart';
 
 class WriteStoryScreen extends StatefulWidget {
@@ -28,6 +31,9 @@ class _WriteStoryScreenState extends State<WriteStoryScreen>
   bool showEmojiKeyboard = false;
   bool showColorPicker = false;
   bool isLoading = false;
+  List<String> bestFriendsOnly = [];
+  bool isVipOnly = false;
+  StoryMusic? selectedMusic;
 
   // Paleta de colores elegante: blanco, negro y dorado
   final List<Color> colorPalette = [
@@ -359,7 +365,7 @@ class _WriteStoryScreenState extends State<WriteStoryScreen>
           // Emoji button
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
-            margin: const EdgeInsets.only(right: 16),
+            margin: const EdgeInsets.only(right: 12),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
@@ -391,6 +397,103 @@ class _WriteStoryScreenState extends State<WriteStoryScreen>
               ),
               onPressed: _toggleEmojiKeyboard,
               tooltip: 'Emojis',
+            ),
+          ),
+          // Music button
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            margin: const EdgeInsets.only(right: 12),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: selectedMusic != null
+                    ? [
+                        Colors.blue.withValues(alpha: 0.4),
+                        Colors.blue.withValues(alpha: 0.2),
+                      ]
+                    : [
+                        Colors.white.withValues(alpha: 0.2),
+                        Colors.white.withValues(alpha: 0.1),
+                      ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: IconButton(
+              icon: Icon(
+                selectedMusic != null ? Icons.music_note : Icons.music_off,
+                color: selectedMusic != null ? Colors.blue : Colors.white,
+                size: 22,
+              ),
+              onPressed: () async {
+                final music = await Get.to<StoryMusic>(
+                  () => const MusicSearchScreen(allowCurrentlyPlaying: true),
+                );
+                if (music != null) {
+                  setState(() {
+                    selectedMusic = music;
+                  });
+                }
+              },
+              tooltip: 'Agregar música',
+            ),
+          ),
+          // Settings button (VIP)
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            margin: const EdgeInsets.only(right: 16),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: isVipOnly
+                    ? [
+                        Colors.amber.withValues(alpha: 0.4),
+                        Colors.amber.withValues(alpha: 0.2),
+                      ]
+                    : [
+                        Colors.white.withValues(alpha: 0.2),
+                        Colors.white.withValues(alpha: 0.1),
+                      ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: IconButton(
+              icon: Icon(
+                isVipOnly ? Icons.star : Icons.star_border,
+                color: isVipOnly ? Colors.amber : Colors.white,
+                size: 22,
+              ),
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  builder: (context) => StorySettingsBottomSheet(
+                    onSave: (friends, vip) {
+                      setState(() {
+                        bestFriendsOnly = friends;
+                        isVipOnly = vip;
+                      });
+                    },
+                    initialBestFriends: bestFriendsOnly,
+                    initialIsVipOnly: isVipOnly,
+                  ),
+                );
+              },
+              tooltip: 'Configuración VIP',
             ),
           ),
         ],
@@ -574,10 +677,13 @@ class _WriteStoryScreenState extends State<WriteStoryScreen>
             return;
           }
           setState(() => isLoading = true);
-          // Upload the text story
+          // Upload the text story con música (limitada a 30 segundos)
           await StoryApi.uploadTextStory(
             text: _textController.text.trim(),
             bgColor: backgroundColor,
+            music: selectedMusic, // Música limitada a 30 segundos
+            bestFriendsOnly: bestFriendsOnly,
+            isVipOnly: isVipOnly,
           );
           setState(() => isLoading = false);
         },

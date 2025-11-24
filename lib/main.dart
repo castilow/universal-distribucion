@@ -15,6 +15,7 @@ import 'i18n/app_languages.dart';
 import 'theme/app_theme.dart';
 import 'widgets/wallet_service_initializer.dart';
 import 'services/zego_call_service.dart';
+import 'services/ai_assistant_initializer.dart';
 import 'package:zego_uikit_prebuilt_call/zego_uikit_prebuilt_call.dart';
 import 'package:zego_uikit_signaling_plugin/zego_uikit_signaling_plugin.dart';
 
@@ -60,6 +61,24 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Banner ASCII grande para los logs
+  if (kDebugMode) {
+    print('\n');
+    print('╔═══════════════════════════════════════════════════════════════╗');
+    print('║                                                               ║');
+    print('║     ██╗  ██╗██╗     ██╗███╗   ██╗██╗  ██╗                     ║');
+    print('║     ██║ ██╔╝██║     ██║████╗  ██║██║ ██╔╝                     ║');
+    print('║     █████╔╝ ██║     ██║██╔██╗ ██║█████╔╝                      ║');
+    print('║     ██╔═██╗ ██║     ██║██║╚██╗██║██╔═██╗                      ║');
+    print('║     ██║  ██╗███████╗██║██║ ╚████║██║  ██╗                     ║');
+    print('║     ╚═╝  ╚═╝╚══════╝╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝                     ║');
+    print('║                                                               ║');
+    print('║                    🚀 Iniciando aplicación...                 ║');
+    print('║                                                               ║');
+    print('╚═══════════════════════════════════════════════════════════════╝');
+    print('\n');
+  }
+
   await _ensureFirebaseInitialized();
 
   // App Check DESACTIVADO para producción - más simple y sin problemas
@@ -82,6 +101,9 @@ Future<void> main() async {
   
   // Inicializar ZEGOCLOUD Call Service
   Get.put(ZegoCallService(), permanent: true);
+  
+  // Inicializar usuario del asistente IA en Firestore
+  await AIAssistantInitializer.ensureAssistantExists();
   
   runApp(const MyApp());
 }
@@ -112,9 +134,9 @@ class MyApp extends GetView<PreferencesController> {
         translations: AppLanguages(),
         locale: controller.locale.value,
         fallbackLocale: const Locale('en'),
-        // Sin transiciones por defecto y sin duración para el push inicial
-        defaultTransition: Transition.noTransition,
-        transitionDuration: Duration.zero,
+        // Transiciones suaves estilo iOS por defecto
+        defaultTransition: Transition.cupertino,
+        transitionDuration: const Duration(milliseconds: 300),
         initialRoute: AppRoutes.splash,
         getPages: AppPages.pages,
       )),

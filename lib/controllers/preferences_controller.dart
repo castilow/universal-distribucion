@@ -18,6 +18,16 @@ class PreferencesController extends GetxController {
   final Rxn<String> chatWallpaperPath = Rxn();
   final Rxn<String> groupWallpaperPath = Rxn();
   final String _defaultLocale = 'en';
+  
+  // Colores personalizados de burbujas
+  final Rx<Color> customSentBubbleColor = Rx<Color>(const Color(0xFF3390EC)); // Telegram Blue
+  final Rx<Color> customReceivedBubbleColor = Rx<Color>(Colors.white); // Blanco por defecto
+  
+  // Tamaño de texto personalizado (multiplicador, 1.0 = tamaño normal)
+  final RxDouble customTextSize = RxDouble(1.0); // 1.0 = 100%, 0.85 = pequeño, 1.15 = grande
+
+  // Radio de borde de burbujas personalizado
+  final RxDouble customBubbleRadius = RxDouble(15.0); // 15.0 por defecto
 
   late SharedPreferences _prefs;
 
@@ -65,6 +75,10 @@ class PreferencesController extends GetxController {
   static const String _themeModeKey = 'theme_mode';
   static const String _localeKey = 'locale';
   static const String _chatWallpaperKey = 'chat_wallpaper';
+  static const String _sentBubbleColorKey = 'sent_bubble_color';
+  static const String _receivedBubbleColorKey = 'received_bubble_color';
+  static const String _textSizeKey = 'text_size';
+  static const String _bubbleRadiusKey = 'bubble_radius';
   //static const String _groupWallpaperKey = 'group_wallpaper';
 
   @override
@@ -125,6 +139,9 @@ class PreferencesController extends GetxController {
       // Ahora cargar las preferencias guardadas
       _loadThemeMode();
       _loadLocale();
+      _loadBubbleColors();
+      _loadTextSize();
+      _loadBubbleRadius();
       
       print('✅ Preferences loaded successfully');
     } catch (e) {
@@ -346,4 +363,159 @@ class PreferencesController extends GetxController {
     locale.value = Locale(languageCode);
     await _prefs.setString('locale', languageCode);
   }
+
+  ///
+  ///  <-- Bubble Colors Customization -->
+  ///
+  
+  // Guardar color de burbuja enviada
+  Future<void> setSentBubbleColor(Color color) async {
+    customSentBubbleColor.value = color;
+    await _prefs.setInt(_sentBubbleColorKey, color.value);
+  }
+
+  // Guardar color de burbuja recibida
+  Future<void> setReceivedBubbleColor(Color color) async {
+    customReceivedBubbleColor.value = color;
+    await _prefs.setInt(_receivedBubbleColorKey, color.value);
+  }
+
+  // Cargar colores de burbujas desde SharedPreferences
+  void _loadBubbleColors() {
+    try {
+      final int? sentColorValue = _prefs.getInt(_sentBubbleColorKey);
+      if (sentColorValue != null) {
+        customSentBubbleColor.value = Color(sentColorValue);
+      }
+
+      final int? receivedColorValue = _prefs.getInt(_receivedBubbleColorKey);
+      if (receivedColorValue != null) {
+        customReceivedBubbleColor.value = Color(receivedColorValue);
+      }
+    } catch (e) {
+      print('Error loading bubble colors: $e');
+    }
+  }
+
+  // Resetear colores a los valores por defecto
+  Future<void> resetBubbleColors() async {
+    customSentBubbleColor.value = const Color(0xFF3390EC); // Telegram Blue
+    customReceivedBubbleColor.value = Colors.white;
+    await _prefs.remove(_sentBubbleColorKey);
+    await _prefs.remove(_receivedBubbleColorKey);
+  }
+
+  // Verificar si hay colores personalizados
+  bool get hasCustomBubbleColors {
+    try {
+      return _prefs.getInt(_sentBubbleColorKey) != null ||
+             _prefs.getInt(_receivedBubbleColorKey) != null;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Obtener color de burbuja enviada (usa personalizado si existe, sino el por defecto)
+  Color getSentBubbleColor() {
+    return customSentBubbleColor.value;
+  }
+
+  // Obtener color de burbuja recibida (usa personalizado si existe, sino el por defecto según tema)
+  Color getReceivedBubbleColor(bool isDarkMode) {
+    if (hasCustomBubbleColors && _prefs.getInt(_receivedBubbleColorKey) != null) {
+      return customReceivedBubbleColor.value;
+    }
+    // Si no hay personalización, usar valores por defecto según tema
+    return isDarkMode ? const Color(0xFF242F3D) : Colors.white;
+  }
+  // END
+
+  ///
+  ///  <-- Text Size Customization -->
+  ///
+  
+  // Guardar tamaño de texto
+  Future<void> setTextSize(double size) async {
+    customTextSize.value = size;
+    await _prefs.setDouble(_textSizeKey, size);
+  }
+
+  // Cargar tamaño de texto desde SharedPreferences
+  void _loadTextSize() {
+    try {
+      final double? savedSize = _prefs.getDouble(_textSizeKey);
+      if (savedSize != null) {
+        customTextSize.value = savedSize;
+      }
+    } catch (e) {
+      print('Error loading text size: $e');
+    }
+  }
+
+  // Resetear tamaño de texto a valor por defecto
+  Future<void> resetTextSize() async {
+    customTextSize.value = 1.0;
+    await _prefs.remove(_textSizeKey);
+  }
+
+  // Obtener tamaño de texto actual
+  double getTextSize() {
+    return customTextSize.value;
+  }
+
+  // Obtener tamaño de fuente escalado
+  double getScaledFontSize(double baseFontSize) {
+    return baseFontSize * customTextSize.value;
+  }
+  // END
+
+  ///
+  ///  <-- Bubble Radius Customization -->
+  ///
+  
+  // Guardar radio de burbuja
+  Future<void> setBubbleRadius(double radius) async {
+    customBubbleRadius.value = radius;
+    await _prefs.setDouble(_bubbleRadiusKey, radius);
+  }
+
+  // Cargar radio de burbuja desde SharedPreferences
+  void _loadBubbleRadius() {
+    try {
+      final double? savedRadius = _prefs.getDouble(_bubbleRadiusKey);
+      if (savedRadius != null) {
+        customBubbleRadius.value = savedRadius;
+      }
+    } catch (e) {
+      print('Error loading bubble radius: $e');
+    }
+  }
+
+  // Resetear radio de burbuja a valor por defecto
+  Future<void> resetBubbleRadius() async {
+    customBubbleRadius.value = 15.0;
+    await _prefs.remove(_bubbleRadiusKey);
+  }
+
+  // Obtener radio de burbuja actual
+  double getBubbleRadius() {
+    return customBubbleRadius.value;
+  }
+  // END
+
+  ///
+  ///  <-- Auto Text Color (Contrast) -->
+  ///
+  
+  // Calcular el color de texto óptimo basado en el color de fondo
+  // Retorna blanco o negro según el contraste
+  static Color getContrastTextColor(Color backgroundColor) {
+    // Calcular la luminancia relativa del color de fondo
+    final double luminance = backgroundColor.computeLuminance();
+    
+    // Si la luminancia es mayor a 0.5, el fondo es claro, usar texto oscuro
+    // Si la luminancia es menor a 0.5, el fondo es oscuro, usar texto claro
+    return luminance > 0.5 ? Colors.black87 : Colors.white;
+  }
+  // END
 }

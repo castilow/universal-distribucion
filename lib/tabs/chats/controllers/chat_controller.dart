@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 import 'package:chat_messenger/api/chat_api.dart';
 import 'package:chat_messenger/models/chat.dart';
 import 'package:chat_messenger/models/user.dart';
+import 'package:chat_messenger/models/message.dart';
+import 'package:chat_messenger/models/ai_assistant_user.dart';
 import 'package:chat_messenger/controllers/auth_controller.dart';
 import 'package:chat_messenger/services/local_cache_service.dart';
 import 'package:chat_messenger/services/avatar_cache_manager.dart';
@@ -53,12 +55,18 @@ class ChatController extends GetxController {
     _stream = ChatApi.getChats().listen((event) async {
       // Procesar chats para manejar reactivación automática
       final processedChats = _processIncomingChats(event);
+      
+      // Añadir el chat del asistente IA al principio si no existe
+      // _ensureAIAssistantChat(processedChats); // REMOVED to hide from list
+      
       chats.value = processedChats;
       isLoading.value = false;
       // Guardar en caché para próximas aperturas instantáneas
       unawaited(LocalCacheService.instance.writeChats(processedChats));
     }, onError: (e) => debugPrint(e.toString()));
   }
+
+
 
   List<Chat> _processIncomingChats(List<Chat> incomingChats) {
     final List<Chat> processedChats = [];
@@ -149,6 +157,9 @@ class ChatController extends GetxController {
           final groupId = chat.groupId ?? '';
           final chatId = groupId.isNotEmpty ? groupId : userId;
           
+          // Exclude Klink AI from search results
+          if (userId == 'klink_ai_assistant') return false;
+
           return chat.receiver!.fullname.toLowerCase().contains(text.toLowerCase()) &&
                  !_pendingDeletions.contains(chatId);
         })
@@ -162,6 +173,9 @@ class ChatController extends GetxController {
           final userId = chat.receiver?.userId ?? '';
           final groupId = chat.groupId ?? '';
           final chatId = groupId.isNotEmpty ? groupId : userId;
+          // Exclude Klink AI from visible list
+          if (userId == 'klink_ai_assistant') return false;
+
           return !_pendingDeletions.contains(chatId);
         })
         .toList();

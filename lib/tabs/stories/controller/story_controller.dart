@@ -45,16 +45,36 @@ class StoryController extends GetxController {
   void _updateStoriesList(List<Story> event) {
     final User currentUser = AuthController.instance.currentUser;
 
-    // Filter out expired stories (older than 24 hours)
-    final validStories = event.where((story) => story.hasValidItems).toList();
+    debugPrint('📚 [STORY_CONTROLLER] Actualizando lista de historias');
+    debugPrint('📚 [STORY_CONTROLLER] Total de historias recibidas: ${event.length}');
 
+    // Filter out expired stories (older than 24 hours)
+    // Solo mostrar historias que tienen items válidos (no expirados)
+    final validStories = event.where((story) {
+      // Verificar que tenga items válidos (menos de 24 horas)
+      final hasValid = story.hasValidItems;
+      if (!hasValid) {
+        debugPrint('⏰ [STORY_CONTROLLER] Historia expirada para usuario: ${story.userId}');
+      }
+      return hasValid;
+    }).toList();
+
+    debugPrint('✅ [STORY_CONTROLLER] Historias válidas: ${validStories.length}');
+
+    // Solo mostrar usuarios que tienen historias activas
     stories.value = validStories;
+    
+    // Poner la historia del usuario actual al principio
     final Story? pinned = stories.firstWhereOrNull(
       (e) => e.userId == currentUser.userId,
     );
-    if (pinned == null) return;
-    stories.remove(pinned);
-    stories.insert(0, pinned);
+    if (pinned != null) {
+      debugPrint('📌 [STORY_CONTROLLER] Moviendo historia del usuario actual al principio');
+      stories.remove(pinned);
+      stories.insert(0, pinned);
+    }
+
+    debugPrint('📚 [STORY_CONTROLLER] Lista final de historias: ${stories.length}');
 
     // Auto-cleanup expired stories from database
     _cleanupExpiredStories(event);
@@ -65,12 +85,15 @@ class StoryController extends GetxController {
         .where((story) => story.isExpired)
         .toList();
 
+    debugPrint('🧹 [STORY_CONTROLLER] Limpiando ${expiredStories.length} historias expiradas');
+
     for (final story in expiredStories) {
       try {
+        debugPrint('🧹 [STORY_CONTROLLER] Eliminando historia expirada de usuario: ${story.userId}');
         await StoryApi.deleteExpiredStoryItems(story);
-        debugPrint('Auto-cleaned expired story for user: ${story.userId}');
+        debugPrint('✅ [STORY_CONTROLLER] Historia expirada eliminada: ${story.userId}');
       } catch (e) {
-        debugPrint('Error cleaning expired story: $e');
+        debugPrint('❌ [STORY_CONTROLLER] Error limpiando historia expirada: $e');
       }
     }
   }

@@ -40,6 +40,17 @@ abstract class AppConfig {
   /// GIPHY API Key
   static const String giphyApiKey = "wKeA54tB1p5yPFj573XvppXKA8yIr9L8";
 
+  ///
+  /// <-- Music API Configuration -->
+  ///
+  
+  /// Spotify API Credentials
+  static const String spotifyClientId = "15c38211c7dd4675aed37c6f3eb3e83d";
+  static const String spotifyClientSecret = "712c7e952ac1403fa00f7239dd408c91";
+  
+  /// YouTube Data API Key
+  static const String youtubeApiKey = "AIzaSyAk8qxHJGNg_odKEMvS-vHAxMphB7dendI";
+
   //
   // <-- AD Configuration -->
   //

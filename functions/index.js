@@ -1,13 +1,24 @@
 const functions = require('firebase-functions');
+const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const crypto = require('crypto');
 const CryptoJS = require('crypto-js');
+const { TranslationServiceClient } = require('@google-cloud/translate').v3;
+const https = require('https');
+
+// Definir el secreto para la API key de OpenAI (Firebase Functions v7)
+const openaiApiKey = defineSecret('OPENAI_API_KEY');
 
 // Inicializar con configuración mínima
 admin.initializeApp({
-  projectId: 'arious-4a07f',
-  storageBucket: 'arious-4a07f.appspot.com',
+  projectId: 'klink-b0358',
+  storageBucket: 'klink-b0358.appspot.com',
 });
+
+// Inicializar Google Cloud Translation v3
+const translationClient = new TranslationServiceClient();
+const PROJECT_ID = admin.app().options.projectId || process.env.GCLOUD_PROJECT || 'klink-b0358';
+const LOCATION = 'us-central1';
 
 // Función para desencriptar mensajes usando el mismo algoritmo que Flutter
 function decryptMessage(encryptedText, messageId) {
@@ -284,5 +295,531 @@ exports.sendPushNotification = functions.https.onCall({
     throw new functions.https.HttpsError('internal', error.message);
   }
   });
+
+// ========================================
+// 🌍 TRADUCCIÓN AUTOMÁTICA DE MENSAJES
+// ========================================
+
+/**
+ * Detecta el idioma de un texto
+ */
+async function detectLanguage(text) {
+  try {
+    const request = {
+      parent: `projects/${PROJECT_ID}/locations/${LOCATION}`,
+      content: text,
+      mimeType: 'text/plain',
+    };
+    const [response] = await translationClient.detectLanguage(request);
+    const top = response.languages && response.languages[0];
+    const langCode = top?.languageCode || top?.language || 'en';
+    console.log('[detectLanguage] Detected:', langCode, 'Confidence:', top?.confidence);
+    return langCode;
+  } catch (error) {
+    console.error('[detectLanguage] Error message:', error?.message);
+    console.error('[detectLanguage] Error details:', error?.details || '');
+    console.error('[detectLanguage] Error code:', error?.code);
+    return 'en'; // Default a inglés si falla
+  }
+}
+
+/**
+ * Traduce un texto a múltiples idiomas
+ */
+async function translateText(text, targetLanguages) {
+  try {
+    const translations = {};
+
+    // Traducir a cada idioma objetivo
+    for (const targetLang of targetLanguages) {
+      try {
+        const request = {
+          parent: `projects/${PROJECT_ID}/locations/${LOCATION}`,
+          contents: [text],
+          mimeType: 'text/plain',
+          targetLanguageCode: targetLang,
+        };
+        const [response] = await translationClient.translateText(request);
+        const translated = response.translations && response.translations[0]?.translatedText;
+        translations[targetLang] = translated || text;
+        console.log(`[translateText] ${targetLang}:`, translated);
+      } catch (error) {
+        console.error(`[translateText] Error translating to ${targetLang}:`, error?.message);
+        console.error(`[translateText] Details:`, error?.details || '');
+        console.error(`[translateText] Code:`, error?.code);
+        translations[targetLang] = text; // Fallback al original
+      }
+    }
+    
+    return translations;
+  } catch (error) {
+    console.error('[translateText] Error:', error);
+    return {};
+  }
+}
+
+/**
+ * Obtiene el idioma preferido de un usuario
+ */
+async function getUserPreferredLanguage(userId) {
+  try {
+    const userDoc = await admin.firestore().collection('Users').doc(userId).get();
+    
+    if (!userDoc.exists) {
+      console.log('[getUserPreferredLanguage] User not found:', userId);
+      return 'en';
+    }
+    
+    // Buscar en preferencias guardadas
+    const userData = userDoc.data();
+    const preferredLang = userData?.preferredLanguage || userData?.locale || 'en';
+    
+    console.log('[getUserPreferredLanguage] User:', userId, 'Language:', preferredLang);
+    return preferredLang;
+  } catch (error) {
+    console.error('[getUserPreferredLanguage] Error:', error);
+    return 'en';
+  }
+}
+
+/**
+ * Función principal: Traduce mensajes automáticamente cuando se crean
+ * Se ejecuta cuando se crea un nuevo mensaje en un chat 1-to-1
+ */
+exports.translateMessage = functions.firestore.onDocumentCreated({
+  document: 'Users/{userId}/Chats/{chatId}/Messages/{messageId}',
+  timeoutSeconds: 60,
+  memory: '256MiB'
+}, async (event) => {
+    try {
+      const { userId, chatId, messageId } = event.params;
+      const messageData = event.data.data();
+      
+      console.log('[translateMessage] New message:', { userId, chatId, messageId });
+      
+      // Solo traducir mensajes de texto
+      if (messageData.type !== 'text' || !messageData.textMsg || messageData.textMsg.trim() === '') {
+        console.log('[translateMessage] Skipping non-text message');
+        return null;
+      }
+      
+      // No traducir si ya está marcado como eliminado
+      if (messageData.isDeleted) {
+        console.log('[translateMessage] Skipping deleted message');
+        return null;
+      }
+      
+      // Desencriptar el mensaje si está encriptado
+      let originalText = messageData.textMsg;
+      let isEncrypted = false;
+      
+      // Verificar si el texto está en base64 (encriptado)
+      if (/^[A-Za-z0-9+/]*={0,2}$/.test(originalText) && originalText.length > 20) {
+        console.log('[translateMessage] Message appears to be encrypted, decrypting...');
+        originalText = decryptMessage(originalText, messageId);
+        isEncrypted = true;
+      }
+      
+      // Detectar el idioma del mensaje
+      const sourceLanguage = await detectLanguage(originalText);
+      console.log('[translateMessage] Source language:', sourceLanguage);
+      
+      // Obtener el idioma preferido del receptor (chatId es el ID del receptor en chats 1-to-1)
+      const receiverLanguage = await getUserPreferredLanguage(chatId);
+      console.log('[translateMessage] Receiver language:', receiverLanguage);
+      
+      // Si el idioma es el mismo, no traducir
+      if (sourceLanguage === receiverLanguage) {
+        console.log('[translateMessage] Same language, skipping translation');
+        return null;
+      }
+      
+      // Traducir el mensaje
+      const translations = await translateText(originalText, [receiverLanguage]);
+      
+      if (!translations[receiverLanguage]) {
+        console.log('[translateMessage] Translation failed');
+        return null;
+      }
+      
+      console.log('[translateMessage] Translation successful:', translations);
+      
+      // Guardar la traducción en el mensaje
+      const updateData = {
+        translations: translations,
+        detectedLanguage: sourceLanguage,
+        translatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+      
+      // Actualizar el mensaje en ambos chats (emisor y receptor)
+      await Promise.all([
+        // Actualizar en el chat del emisor
+        event.data.ref.update(updateData),
+        // Actualizar en el chat del receptor
+        admin.firestore()
+          .collection('Users').doc(chatId)
+          .collection('Chats').doc(userId)
+          .collection('Messages').doc(messageId)
+          .update(updateData),
+      ]);
+      
+      console.log('[translateMessage] Message translated and saved successfully');
+      return null;
+      
+    } catch (error) {
+      console.error('[translateMessage] Error:', error);
+      // No lanzar error para no bloquear el flujo
+      return null;
+    }
+  });
+
+/**
+ * Función callable para traducir mensajes bajo demanda
+ * Útil para traducir mensajes antiguos o cuando el usuario cambia su idioma
+ */
+exports.translateMessageOnDemand = functions.https.onCall({
+  enforceAppCheck: false,
+}, async (data, context) => {
+  try {
+    // Compatibilidad con diferentes formatos de payload (v1, v2, SDKs móviles)
+    // En algunos casos los datos vienen anidados en data.data o data.data.data
+    const rawData = data || {};
+    const actualData = rawData?.data?.data || rawData?.data || rawData || {};
+
+    const { messageText, targetLanguage } = actualData;
+
+    console.log('[translateMessageOnDemand] Received messageText length:', messageText?.length || 0);
+    console.log('[translateMessageOnDemand] Received targetLanguage:', targetLanguage);
+    console.log('[translateMessageOnDemand] messageText preview:', messageText?.substring(0, 50));
+    
+    if (!messageText || !targetLanguage) {
+      console.error('[translateMessageOnDemand] Missing parameters after normalization:', { 
+        hasMessageText: !!messageText, 
+        hasTargetLanguage: !!targetLanguage 
+      });
+      throw new functions.https.HttpsError('invalid-argument', 'Missing messageText or targetLanguage');
+    }
+    
+    console.log('[translateMessageOnDemand] Translating to:', targetLanguage);
+    console.log('[translateMessageOnDemand] Message text length:', messageText.length);
+    
+    // Verificar que la API de traducción esté inicializada
+    if (!translationClient) {
+      console.error('[translateMessageOnDemand] Translation API not initialized');
+      throw new functions.https.HttpsError('internal', 'Translation API not initialized');
+    }
+    
+    // Detectar idioma origen
+    let sourceLanguage;
+    try {
+      sourceLanguage = await detectLanguage(messageText);
+      console.log('[translateMessageOnDemand] Source language detected:', sourceLanguage);
+    } catch (error) {
+      console.error('[translateMessageOnDemand] Error detecting language:', error);
+      throw new functions.https.HttpsError('internal', `Language detection failed: ${error.message}`);
+    }
+    
+    // Si es el mismo idioma, devolver el original
+    if (sourceLanguage === targetLanguage) {
+      console.log('[translateMessageOnDemand] Same language, no translation needed');
+      return {
+        originalText: messageText,
+        translatedText: messageText,
+        sourceLanguage,
+        targetLanguage,
+        wasTranslated: false,
+      };
+    }
+    
+    // Traducir
+    let translations;
+    try {
+      translations = await translateText(messageText, [targetLanguage]);
+      console.log('[translateMessageOnDemand] Translation result:', translations);
+    } catch (error) {
+      console.error('[translateMessageOnDemand] Error translating:', error);
+      throw new functions.https.HttpsError('internal', `Translation failed: ${error.message}`);
+    }
+    
+    const translatedText = translations[targetLanguage] || messageText;
+    
+    return {
+      originalText: messageText,
+      translatedText,
+      sourceLanguage,
+      targetLanguage,
+      wasTranslated: true,
+    };
+    
+  } catch (error) {
+    console.error('[translateMessageOnDemand] Unexpected error message:', error?.message || 'Unknown error');
+    console.error('[translateMessageOnDemand] Error stack:', error?.stack || 'No stack trace');
+    console.error('[translateMessageOnDemand] Error name:', error?.name || 'Unknown');
+    
+    // Si ya es un HttpsError, relanzarlo
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    
+    // Si no, crear un nuevo HttpsError
+    throw new functions.https.HttpsError('internal', error?.message || 'Unknown error occurred');
+  }
+});
+
+// ========================================
+// 🤖 CHATGPT ASSISTANT
+// ========================================
+
+/**
+ * Función para comunicarse con ChatGPT de forma segura
+ */
+exports.chatWithAssistant = functions.https.onCall({
+  enforceAppCheck: false,
+  secrets: [openaiApiKey],
+}, async (data, context) => {
+  try {
+    // Log para debugging
+    console.log("[chatWithAssistant] Context auth:", context?.auth ? "Present" : "Missing");
+    console.log("[chatWithAssistant] Context:", JSON.stringify({
+      auth: context?.auth ? { uid: context.auth.uid } : null,
+      rawRequest: context?.rawRequest ? "Present" : "Missing"
+    }));
+
+    // Verificar autenticación (permitir si no hay contexto pero hay datos)
+    if (!context?.auth) {
+      console.warn("[chatWithAssistant] No authentication context, but proceeding...");
+      // No lanzar error, solo registrar advertencia
+    }
+
+    // Compatibilidad con diferentes formatos de payload
+    const actualData = data?.data?.data || data?.data || data || {};
+    const {message, conversationHistory} = actualData;
+
+    // Log solo los campos que necesitamos para evitar referencias circulares
+    console.log("[chatWithAssistant] Received message:", message?.substring(0, 50));
+    console.log("[chatWithAssistant] Conversation history length:", conversationHistory?.length || 0);
+    if (conversationHistory && Array.isArray(conversationHistory)) {
+      console.log("[chatWithAssistant] Conversation history preview:", JSON.stringify(conversationHistory.slice(0, 2)));
+    }
+
+    // Validar parámetros
+    if (!message || typeof message !== "string") {
+      throw new functions.https.HttpsError(
+          "invalid-argument",
+          "El mensaje es requerido y debe ser texto",
+      );
+    }
+
+    // Obtener la API key usando el nuevo sistema de parámetros (Firebase Functions v7)
+    let apiKey;
+    try {
+      console.log("[chatWithAssistant] Getting API key from secret...");
+      apiKey = openaiApiKey.value();
+      console.log("[chatWithAssistant] API Key retrieved successfully");
+    } catch (error) {
+      console.error("[chatWithAssistant] Error getting API key:", error.message);
+      throw new functions.https.HttpsError(
+          "failed-precondition",
+          "El asistente no está disponible en este momento",
+      );
+    }
+
+    console.log("[chatWithAssistant] API Key present:", !!apiKey);
+    console.log("[chatWithAssistant] API Key length:", apiKey ? apiKey.length : 0);
+
+    if (!apiKey) {
+      console.error("API Key de OpenAI no configurada");
+      console.error("Configura con: firebase functions:secrets:set OPENAI_API_KEY");
+      throw new functions.https.HttpsError(
+          "failed-precondition",
+          "El asistente no está disponible en este momento",
+      );
+    }
+
+    // Limpiar la API key (eliminar espacios y caracteres inválidos)
+    let cleanApiKey;
+    try {
+      cleanApiKey = apiKey.trim().replace(/\s+/g, '');
+      console.log("[chatWithAssistant] Clean API Key length:", cleanApiKey.length);
+      console.log("[chatWithAssistant] Clean API Key first 10 chars:", cleanApiKey.substring(0, 10));
+    } catch (error) {
+      console.error("[chatWithAssistant] Error cleaning API key:", error.message);
+      throw new functions.https.HttpsError(
+          "internal",
+          "Error procesando la configuración del asistente",
+      );
+    }
+
+    // Preparar mensajes para ChatGPT
+    console.log("[chatWithAssistant] Starting to prepare messages for ChatGPT...");
+    console.log("[chatWithAssistant] Message to send:", message?.substring(0, 50));
+    console.log("[chatWithAssistant] Conversation history type:", typeof conversationHistory);
+    console.log("[chatWithAssistant] Conversation history is array:", Array.isArray(conversationHistory));
+    
+    const messages = [
+      {
+        role: "system",
+        content: "Eres Klink AI, un asistente inteligente y amigable " +
+          "integrado en la aplicación de mensajería Klink. Tu objetivo " +
+          "es ayudar a los usuarios con cualquier pregunta o tarea que " +
+          "necesiten. Sé conciso, útil y conversacional. Responde en el " +
+          "mismo idioma que te hablen.",
+      },
+    ];
+
+    // Agregar historial si existe
+    if (conversationHistory && Array.isArray(conversationHistory)) {
+      // Limitar a los últimos 10 mensajes para no exceder tokens
+      const recentHistory = conversationHistory.slice(-10);
+      messages.push(...recentHistory);
+    }
+
+    // Agregar el mensaje actual
+    console.log("[chatWithAssistant] Adding current message to array...");
+    messages.push({
+      role: "user",
+      content: message,
+    });
+
+    console.log("[chatWithAssistant] Messages prepared, total:", messages.length);
+    console.log("[chatWithAssistant] First message role:", messages[0]?.role);
+    console.log("[chatWithAssistant] Last message role:", messages[messages.length - 1]?.role);
+    console.log("[chatWithAssistant] Llamando a OpenAI API...");
+    console.log("[chatWithAssistant] Total messages to send:", messages.length);
+    console.log("[chatWithAssistant] API Key present:", !!apiKey);
+    console.log("[chatWithAssistant] Clean API Key present:", !!cleanApiKey);
+
+    // Llamar a la API de OpenAI usando https nativo
+    const requestBody = {
+      model: "gpt-3.5-turbo",
+      messages: messages,
+      temperature: 0.7,
+      max_tokens: 800,
+      presence_penalty: 0.6,
+      frequency_penalty: 0.3,
+    };
+    
+    console.log("[chatWithAssistant] Request body size:", JSON.stringify(requestBody).length);
+
+    const responseData = await new Promise((resolve, reject) => {
+      const postData = JSON.stringify(requestBody);
+      
+      const options = {
+        hostname: 'api.openai.com',
+        port: 443,
+        path: '/v1/chat/completions',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${cleanApiKey}`,
+          'Content-Length': Buffer.byteLength(postData),
+        },
+        timeout: 25000, // 25 segundos
+      };
+
+      const req = https.request(options, (res) => {
+        let data = '';
+
+        console.log("[chatWithAssistant] OpenAI response status:", res.statusCode);
+        console.log("[chatWithAssistant] OpenAI response headers:", JSON.stringify(res.headers));
+
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+
+        res.on('end', () => {
+          try {
+            console.log("[chatWithAssistant] OpenAI response data length:", data.length);
+            console.log("[chatWithAssistant] OpenAI response data preview:", data.substring(0, 500));
+
+            if (res.statusCode !== 200) {
+              console.error("[chatWithAssistant] Error de OpenAI:", res.statusCode, data.substring(0, 500));
+              reject(new Error(`OpenAI API error: ${res.statusCode} - ${data.substring(0, 200)}`));
+              return;
+            }
+
+            const parsedData = JSON.parse(data);
+            console.log("[chatWithAssistant] OpenAI response data keys:", Object.keys(parsedData));
+            console.log("[chatWithAssistant] Choices count:", parsedData.choices?.length || 0);
+            
+            if (parsedData.choices && parsedData.choices.length > 0) {
+              console.log("[chatWithAssistant] First choice message preview:", parsedData.choices[0].message?.content?.substring(0, 100));
+            }
+            
+            resolve(parsedData);
+          } catch (error) {
+            console.error("[chatWithAssistant] Error parsing response:", error.message);
+            console.error("[chatWithAssistant] Raw data:", data.substring(0, 500));
+            reject(error);
+          }
+        });
+      });
+
+      req.on('error', (error) => {
+        console.error("[chatWithAssistant] Request error:", error.message);
+        console.error("[chatWithAssistant] Request error stack:", error.stack);
+        reject(error);
+      });
+
+      req.on('timeout', () => {
+        console.error("[chatWithAssistant] Request timeout after 25 seconds");
+        req.destroy();
+        reject(new Error('Request timeout'));
+      });
+
+      console.log("[chatWithAssistant] Sending request to OpenAI...");
+      console.log("[chatWithAssistant] Request URL: https://api.openai.com/v1/chat/completions");
+      console.log("[chatWithAssistant] Authorization header present:", !!options.headers.Authorization);
+      console.log("[chatWithAssistant] Authorization header length:", options.headers.Authorization?.length || 0);
+      
+      req.write(postData);
+      req.end();
+      
+      console.log("[chatWithAssistant] Request sent, waiting for response...");
+    });
+
+    // Extraer la respuesta
+    const assistantMessage = responseData.choices?.[0]?.message?.content;
+
+    if (!assistantMessage) {
+      console.error("[chatWithAssistant] No assistant message in response:", JSON.stringify(responseData).substring(0, 500));
+      throw new Error("No se recibió respuesta del asistente");
+    }
+
+    console.log("[chatWithAssistant] Respuesta exitosa de OpenAI, length:", assistantMessage.length);
+
+    return {
+      response: assistantMessage.trim(),
+      success: true,
+    };
+  } catch (error) {
+    // Extraer solo el mensaje de error como string para evitar referencias circulares
+    const errorMessageStr = error?.message || error?.toString() || "Error desconocido";
+    console.error("[chatWithAssistant] Error:", errorMessageStr);
+
+    // Mensaje de error amigable para el usuario
+    let userErrorMessage = "Lo siento, no pude procesar tu solicitud " +
+      "en este momento. Por favor, inténtalo de nuevo.";
+
+    if (errorMessageStr.includes("timeout") || errorMessageStr.includes("AbortError")) {
+      userErrorMessage = "La respuesta está tardando demasiado. " +
+        "Por favor, inténtalo de nuevo.";
+    } else if (errorMessageStr.includes("unauthenticated")) {
+      userErrorMessage = "Debes iniciar sesión para usar el asistente.";
+    } else if (errorMessageStr.includes("OpenAI API error: 401")) {
+      userErrorMessage = "Error de autenticación con OpenAI. La API Key podría ser inválida.";
+    } else if (errorMessageStr.includes("OpenAI API error: 429")) {
+      userErrorMessage = "Demasiadas solicitudes a OpenAI. Por favor, espera un momento.";
+    } else if (errorMessageStr.includes("OpenAI API error: 500")) {
+      userErrorMessage = "Error interno del servidor de OpenAI. Inténtalo de nuevo más tarde.";
+    }
+
+    return {
+      response: userErrorMessage,
+      success: false,
+      error: errorMessageStr.substring(0, 200), // Limitar longitud para evitar problemas
+    };
+  }
+});
 
 

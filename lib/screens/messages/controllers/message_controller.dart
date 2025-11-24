@@ -5,7 +5,10 @@ import 'dart:math';
 import 'package:chat_messenger/api/chat_api.dart';
 import 'package:chat_messenger/api/message_api.dart';
 import 'package:chat_messenger/api/user_api.dart';
+import 'package:chat_messenger/api/translation_api.dart';
 import 'package:chat_messenger/controllers/auth_controller.dart';
+import 'package:chat_messenger/controllers/preferences_controller.dart';
+import 'package:chat_messenger/controllers/assistant_controller.dart';
 import 'package:chat_messenger/helpers/app_helper.dart';
 import 'package:chat_messenger/helpers/encrypt_helper.dart';
 import 'package:flutter/material.dart';
@@ -708,13 +711,26 @@ class MessageController extends GetxController {
       debugPrint('Current User ID: ${currentUser.userId}');
       debugPrint('Chat User ID: ${user!.userId}');
       
-      _stream = MessageApi.getMessages(user!.userId).listen((event) {
+      _stream = MessageApi.getMessages(user!.userId).listen((event) async {
         debugPrint('Messages Received: ${event.length}');
-        // Log individual messages for debugging
+        // Log individual messages for debugging (incluye info de sender para depurar traducción)
         for (var message in event) {
-          debugPrint('Private Message - ID: ${message.msgId}, Type: ${message.type}, Text: ${message.textMsg.isEmpty ? "Empty" : "Has content"}, IsDeleted: ${message.isDeleted}');
+          debugPrint(
+            'Private Message - ID: ${message.msgId}, '
+            'Type: ${message.type}, '
+            'SenderId: ${message.senderId}, '
+            'IsSender: ${message.isSender}, '
+            'Text: ${message.textMsg.isEmpty ? "Empty" : "Has content"}, '
+            'IsDeleted: ${message.isDeleted}',
+          );
         }
+        
+        // Actualizar lista local primero
         messages.value = event;
+        
+        // Traducir mensajes que no tienen traducción usando la lista actual
+        await _translateMessagesIfNeeded(messages);
+        
         isLoading.value = false;
         scrollToBottom();
       }, onError: (e) {
@@ -844,6 +860,22 @@ class MessageController extends GetxController {
       }
     } else {
       MessageApi.sendMessage(message: message, receiver: user!);
+      
+      // Si es un mensaje de texto al asistente IA, obtener respuesta automática
+      debugPrint('🔍 sendMessage: Verificando si es asistente...');
+      debugPrint('🔍 sendMessage: type = $type, MessageType.text = ${MessageType.text}');
+      debugPrint('🔍 sendMessage: user?.userId = ${user?.userId}');
+      debugPrint('🔍 sendMessage: textMsg = ${textMsg?.substring(0, textMsg.length > 20 ? 20 : textMsg.length)}');
+      
+      if (type == MessageType.text && user != null && user!.userId == 'klink_ai_assistant') {
+        debugPrint('✅ sendMessage: Es un mensaje al asistente, llamando _handleAssistantResponse...');
+        _handleAssistantResponse(textMsg ?? '');
+      } else {
+        debugPrint('❌ sendMessage: No es un mensaje al asistente');
+        debugPrint('   - type == MessageType.text: ${type == MessageType.text}');
+        debugPrint('   - user != null: ${user != null}');
+        debugPrint('   - user?.userId == klink_ai_assistant: ${user?.userId == 'klink_ai_assistant'}');
+      }
     }
 
     // Reset values and update UI
@@ -851,6 +883,32 @@ class MessageController extends GetxController {
     textController.clear();
     selectedMessage.value = null;
     replyMessage.value = null;
+  }
+
+  /// Maneja la respuesta automática del asistente IA
+  Future<void> _handleAssistantResponse(String userMessage) async {
+    try {
+      debugPrint('🔵 _handleAssistantResponse: Iniciando con mensaje: $userMessage');
+      
+      // Verificar si el controlador está disponible, si no, inicializarlo
+      AssistantController assistantController;
+      try {
+        assistantController = Get.find<AssistantController>();
+        debugPrint('🔵 _handleAssistantResponse: AssistantController encontrado');
+      } catch (e) {
+        debugPrint('⚠️ AssistantController no encontrado, inicializando...');
+        assistantController = Get.put(AssistantController());
+        debugPrint('🔵 _handleAssistantResponse: AssistantController inicializado');
+      }
+      
+      // Llamar al asistente (esto guardará automáticamente la respuesta en Firestore)
+      debugPrint('🔵 _handleAssistantResponse: Llamando a askAssistant...');
+      final response = await assistantController.askAssistant(userMessage);
+      debugPrint('🔵 _handleAssistantResponse: Respuesta recibida: ${response?.substring(0, response.length > 50 ? 50 : response.length)}...');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error obteniendo respuesta del asistente: $e');
+      debugPrint('❌ StackTrace: $stackTrace');
+    }
   }
 
   Future<void> forwardMessage(Message message) async {
@@ -1002,6 +1060,153 @@ class MessageController extends GetxController {
     
     // Update loading status
     isUploading.value = uploadingFiles.isNotEmpty;
+  }
+
+  // <-- Traducción automática de mensajes -->
+  Future<void> _translateMessagesIfNeeded(List<Message> newMessages) async {
+    try {
+      // Obtener el idioma preferido del usuario actual
+      final userLang = PreferencesController.instance.locale.value.languageCode;
+      final currentUserId = AuthController.instance.currentUser.userId;
+      
+      debugPrint('[_translateMessagesIfNeeded] ========================================');
+      debugPrint('[_translateMessagesIfNeeded] User language: $userLang');
+      debugPrint('[_translateMessagesIfNeeded] Current user ID: $currentUserId');
+      debugPrint('[_translateMessagesIfNeeded] Total messages: ${newMessages.length}');
+      
+      if (newMessages.isEmpty) {
+        debugPrint('[_translateMessagesIfNeeded] No messages to process');
+        return;
+      }
+      
+      // Filtrar mensajes que necesitan traducción
+      final messagesToTranslate = <Message>[];
+      
+      for (final message in newMessages) {
+        final textPreview = message.textMsg.length > 30 
+            ? '${message.textMsg.substring(0, 30)}...' 
+            : message.textMsg;
+        
+        debugPrint('[_translateMessagesIfNeeded] Checking message ${message.msgId}:');
+        debugPrint('  - Type: ${message.type}');
+        debugPrint('  - SenderId: ${message.senderId}');
+        debugPrint('  - CurrentUserId: $currentUserId');
+        debugPrint('  - IsSender: ${message.isSender}');
+        debugPrint('  - Text: "$textPreview"');
+        debugPrint('  - Text length: ${message.textMsg.length}');
+        debugPrint('  - HasTranslation($userLang): ${message.hasTranslation(userLang)}');
+        debugPrint('  - Text isEmpty: ${message.textMsg.trim().isEmpty}');
+        
+        // Solo mensajes de texto
+        if (message.type != MessageType.text) {
+          debugPrint('  - ❌ Filtered: not text message');
+          continue;
+        }
+        
+        // Solo mensajes de otros usuarios
+        if (message.isSender) {
+          debugPrint('  - ❌ Filtered: is sender (senderId matches currentUserId)');
+          continue;
+        }
+        
+        // Solo si no tiene traducción para el idioma del usuario
+        if (message.hasTranslation(userLang)) {
+          debugPrint('  - ❌ Filtered: already has translation for $userLang');
+          continue;
+        }
+        
+        // Solo si el mensaje no está vacío
+        if (message.textMsg.trim().isEmpty) {
+          debugPrint('  - ❌ Filtered: empty message');
+          continue;
+        }
+        
+        debugPrint('  - ✅ Will translate');
+        messagesToTranslate.add(message);
+      }
+      
+      if (messagesToTranslate.isEmpty) {
+        debugPrint('[_translateMessagesIfNeeded] No messages to translate after filtering');
+        debugPrint('[_translateMessagesIfNeeded] ========================================');
+        return;
+      }
+      
+      debugPrint('[_translateMessagesIfNeeded] Translating ${messagesToTranslate.length} messages');
+      debugPrint('[_translateMessagesIfNeeded] ========================================');
+      
+      // Traducir cada mensaje
+      for (final message in messagesToTranslate) {
+        try {
+          debugPrint('[_translateMessagesIfNeeded] Translating message ${message.msgId}');
+          debugPrint('  - Original text: "${message.textMsg}"');
+          debugPrint('  - Target language: $userLang');
+          
+          final translation = await TranslationApi.translateAndCache(
+            messageText: message.textMsg,
+            targetLanguage: userLang,
+          );
+          
+          if (translation != null && translation.containsKey(userLang)) {
+            // Crear un nuevo objeto Message con la traducción
+            final updatedMessage = Message(
+              msgId: message.msgId,
+              docRef: message.docRef,
+              senderId: message.senderId,
+              type: message.type,
+              textMsg: message.textMsg,
+              fileUrl: message.fileUrl,
+              gifUrl: message.gifUrl,
+              location: message.location,
+              videoThumbnail: message.videoThumbnail,
+              isRead: message.isRead,
+              isDeleted: message.isDeleted,
+              isForwarded: message.isForwarded,
+              sentAt: message.sentAt,
+              updatedAt: message.updatedAt,
+              replyMessage: message.replyMessage,
+              groupUpdate: message.groupUpdate,
+              reactions: message.reactions,
+              translations: translation,
+              detectedLanguage: message.detectedLanguage,
+              translatedAt: DateTime.now(),
+            );
+            
+            debugPrint('[_translateMessagesIfNeeded] ✅ Translated: "${translation[userLang]}"');
+            
+            // Actualizar en la lista local
+            final index = messages.indexWhere((m) => m.msgId == message.msgId);
+            if (index != -1) {
+              messages[index] = updatedMessage;
+              messages.refresh(); // Forzar actualización de GetX
+              debugPrint('[_translateMessagesIfNeeded] ✅ Updated message in list at index $index');
+            } else {
+              debugPrint('[_translateMessagesIfNeeded] ⚠️ Message not found in list: ${message.msgId}');
+            }
+            
+            // Guardar en Firestore para que persista
+            if (!isGroup && user != null) {
+              await MessageApi.updateMessageTranslation(
+                userId: AuthController.instance.currentUser.userId,
+                receiverId: user!.userId,
+                messageId: message.msgId,
+                translations: translation,
+              );
+              debugPrint('[_translateMessagesIfNeeded] ✅ Saved translation to Firestore');
+            }
+          } else {
+            debugPrint('[_translateMessagesIfNeeded] ❌ Translation returned null or empty for message ${message.msgId}');
+          }
+        } catch (e, stackTrace) {
+          debugPrint('[_translateMessagesIfNeeded] ❌ Error translating message ${message.msgId}: $e');
+          debugPrint('[_translateMessagesIfNeeded] Stack trace: $stackTrace');
+        }
+      }
+      
+      debugPrint('[_translateMessagesIfNeeded] ========================================');
+    } catch (e, stackTrace) {
+      debugPrint('[_translateMessagesIfNeeded] ❌ ERROR: $e');
+      debugPrint('[_translateMessagesIfNeeded] Stack trace: $stackTrace');
+    }
   }
   // END.
 

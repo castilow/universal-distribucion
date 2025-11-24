@@ -3,8 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter_iconly/flutter_iconly.dart';
 import 'package:get/get.dart';
+import 'package:chat_messenger/tabs/stories/story_preview_screen.dart';
 import 'dart:async';
 import 'dart:io';
+import 'package:chat_messenger/api/story_api.dart';
+import 'package:chat_messenger/helpers/dialog_helper.dart';
 
 class StoryCamera extends StatefulWidget {
   const StoryCamera({
@@ -227,9 +230,22 @@ class _StoryCameraState extends State<StoryCamera>
     }
   }
 
-  void _navigateToPreview() {
-    // TODO: Navegar a pantalla de preview/edición
-    // Notificaciones deshabilitadas
+  Future<void> _navigateToPreview() async {
+    if (_capturedImagePath != null) {
+      // Navegar a preview con opciones de música y VIP
+      final imageFile = File(_capturedImagePath!);
+      Get.to(() => StoryPreviewScreen(
+        file: imageFile,
+        isVideo: false,
+      ));
+    } else if (_capturedVideoPath != null) {
+      // Navegar a preview con opciones de música y VIP
+      final videoFile = File(_capturedVideoPath!);
+      Get.to(() => StoryPreviewScreen(
+        file: videoFile,
+        isVideo: true,
+      ));
+    }
   }
 
   String _formatRecordingTime(int seconds) {

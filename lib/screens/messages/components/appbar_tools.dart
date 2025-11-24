@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chat_messenger/components/scale_button.dart';
 import 'package:flutter_iconly/flutter_iconly.dart';
 import 'package:chat_messenger/api/report_api.dart';
 import 'package:chat_messenger/api/user_api.dart';
@@ -74,7 +75,7 @@ class AppBarTools extends StatelessWidget implements PreferredSizeWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                GestureDetector(
+                ScaleButton(
                   onTap: () => Get.back(),
                    child: Icon(Icons.arrow_back_ios_new_sharp, color: isDarkMode ? primaryLight : Colors.blue),
                 ),
@@ -228,133 +229,89 @@ class AppBarTools extends StatelessWidget implements PreferredSizeWidget {
     
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return AppBar(
-      backgroundColor: isDarkMode ? darkThemeBgColor : Colors.white.withOpacity(0.8),
+      backgroundColor: isDarkMode ? darkPrimaryContainer : Colors.white,
       elevation: 0,
-      toolbarHeight: 140, // Subir aún más el header
-      flexibleSpace: Container(
-        decoration: BoxDecoration(
-          color: isDarkMode ? darkThemeBgColor : Colors.white.withOpacity(0.8),
-          // Efecto de difuminado/blur
-          boxShadow: [
-            BoxShadow(
-              color: isDarkMode ? Colors.black.withOpacity(0.3) : Colors.white.withOpacity(0.3),
-              blurRadius: 10,
-              spreadRadius: 1,
-            ),
-          ],
-        ),
+      toolbarHeight: 60, // Standard height
+      leadingWidth: 70, // Space for back button and badge
+      leading: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          ScaleButton(
+            onTap: () => Get.back(),
+            child: Icon(Icons.arrow_back_ios_new_rounded, color: isDarkMode ? Colors.white : Colors.black, size: 22),
+          ),
+          const SizedBox(width: 4),
+          Obx(() {
+            int totalUnread = 0;
+            for (final chat in ChatController.instance.chats) {
+              totalUnread += chat.unread;
+            }
+            for (final group in GroupController.instance.groups) {
+              totalUnread += group.unread;
+            }
+            if (totalUnread == 0) return const SizedBox.shrink();
+            return BadgeCount(
+              counter: totalUnread,
+              bgColor: primaryColor,
+            );
+          }),
+        ],
       ),
-      leadingWidth: 60, // Más espacio para la flechita y el badge
-              leading: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: () => Get.back(),
-                  child: Icon(Icons.arrow_back_ios_new_sharp, color: isDarkMode ? primaryLight : Colors.blue),
-                ),
-                const SizedBox(width: 8), // Espacio entre flecha y badge
-                // Badge con número total de mensajes sin leer
-                Obx(() {
-                  // Calcular total de mensajes sin leer de todos los chats y grupos
-                  int totalUnread = 0;
-                  
-                  // Sumar mensajes sin leer de chats individuales
-                  for (final chat in ChatController.instance.chats) {
-                    totalUnread += chat.unread;
-                  }
-                  
-                  // Sumar mensajes sin leer de grupos
-                  for (final group in GroupController.instance.groups) {
-                    totalUnread += group.unread;
-                  }
-                  
-                  return BadgeCount(
-                    counter: totalUnread,
-                    bgColor: Colors.blue,
-                  );
-                }),
-              ],
-            ),
-          ],
-        ),
-      centerTitle: true, // Centrar el título
+      titleSpacing: 0,
       title: GestureDetector(
         onTap: () => RoutesHelper.toProfileView(user!, false),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
           children: [
-            /// <--- Profile name centrado --->
-            Text(
-              user!.fullname,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: isDarkMode ? Colors.white : Colors.black,
+            Hero(
+              tag: 'avatar_${user!.userId}',
+              child: CachedCircleAvatar(
+                backgroundColor: user!.photoUrl.isEmpty ? secondaryColor : primaryColor,
+                imageUrl: user!.photoUrl,
+                borderWidth: 0,
+                padding: 0,
+                radius: 20, // 40px size
               ),
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 2),
-            /// <--- Status fijo: "últ. vez recientemente" --->
-            Text(
-              "últ. vez recientemente",
-              style: TextStyle(
-                fontSize: 12,
-                color: isDarkMode ? Colors.white70 : Colors.black54,
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    user!.fullname,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: isDarkMode ? Colors.white : Colors.black,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    user!.isOnline ? 'en línea' : 'últ. vez recientemente',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: user!.isOnline ? primaryColor : (isDarkMode ? Colors.white54 : Colors.black54),
+                      fontWeight: user!.isOnline ? FontWeight.w500 : FontWeight.normal,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),
       ),
       actions: [
-        // <--- Botón de llamada de voz --->
         IconButton(
-          onPressed: () {
-            ZegoCallService.instance.startVoiceCall(targetUser: user!);
-          },
-          icon: Icon(
-            Icons.call,
-            color: isDarkMode ? Colors.white : Colors.black,
-            size: 24,
-          ),
-          tooltip: 'Voice call',
+          onPressed: () => ZegoCallService.instance.startVoiceCall(targetUser: user!),
+          icon: Icon(Icons.call, color: isDarkMode ? Colors.white : Colors.black),
         ),
-        
-        // <--- Botón de llamada de video --->
         IconButton(
-          onPressed: () {
-            ZegoCallService.instance.startVideoCall(targetUser: user!);
-          },
-          icon: Icon(
-            Icons.videocam,
-            color: isDarkMode ? Colors.white : Colors.black,
-            size: 24,
-          ),
-          tooltip: 'Video call',
+          onPressed: () => ZegoCallService.instance.startVideoCall(targetUser: user!),
+          icon: Icon(Icons.videocam, color: isDarkMode ? Colors.white : Colors.black),
         ),
-        
-        // <--- Profile photo en la derecha como acción --->
-        Padding(
-          padding: const EdgeInsets.only(right: 16, top: 4, bottom: 4),
-          child: GestureDetector(
-            onTap: () => RoutesHelper.toProfileView(user!, false),
-            child: Hero(
-              tag: 'profile-${user!.userId}',
-              child: CachedCircleAvatar(
-                backgroundColor:
-                    user!.photoUrl.isEmpty ? secondaryColor : primaryColor,
-                imageUrl: user!.photoUrl,
-                borderWidth: 0,
-                padding: 0,
-                radius: 22, // Ligeramente más grande para mejor visibilidad
-              ),
-            ),
-          ),
-        ),
+        const SizedBox(width: 8),
       ],
     );
   }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:chat_messenger/components/svg_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -338,52 +339,74 @@ final bool kbOpen = MediaQuery.of(context).viewInsets.bottom > 0;
         duration: const Duration(milliseconds: 300),
         child: Transform.translate(
           offset: const Offset(0, lift),
-          child: Container(
-              color: _isRecording ? Colors.transparent : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF121212) : Colors.white.withOpacity(0.9)),
-            // SUBIMOS más (antes: 18.0). Reducimos padding inferior para acercarlo al contenido.
-          padding: EdgeInsets.only(
-  top: 6.0,
-  bottom: _isRecording ? 0.0 : (kbOpen ? 0.0 : 40.0), // ✅ sin hueco al grabar// cerrado = igual que ahora; abierto = pegado
-),
-            child: Stack(
-              children: [
-               Obx(() {
-                 final bool isDark = Theme.of(context).brightness == Brightness.dark;
-                 return Column(
-  mainAxisSize: MainAxisSize.min,
-  children: [
-    if (controller.isReplying && controller.replyMessage.value != null)
-      _buildReplyView(),
+              child: Container(
+                color: Colors.transparent,
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 6.0,
+                  bottom: kbOpen ? 10.0 : 40.0,
+                ),
+                child: Stack(
+                  alignment: Alignment.bottomCenter,
+                  children: [
+                    // Floating Glass Container
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(35),
+                      child: BackdropFilter(
+                        filter: ui.ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: (Theme.of(context).brightness == Brightness.dark 
+                                ? const Color(0xFF1E1E1E) 
+                                : const Color(0xFFFFFFFF)).withOpacity(0.85),
+                            borderRadius: BorderRadius.circular(35),
+                            border: Border.all(
+                              color: Theme.of(context).brightness == Brightness.dark 
+                                  ? Colors.white.withOpacity(0.1) 
+                                  : Colors.black.withOpacity(0.05),
+                              width: 0.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                                spreadRadius: 0,
+                              ),
+                            ],
+                          ),
+                          child: Obx(() {
+                            final bool isDark = Theme.of(context).brightness == Brightness.dark;
+                            return Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (controller.isReplying && controller.replyMessage.value != null)
+                                  _buildReplyView(),
 
-    if (controller.editingMessage.value != null)
-      _buildEditBar(),
+                                if (controller.editingMessage.value != null)
+                                  _buildEditBar(),
 
-    // 🔹 Si estoy grabando, muestro la barra especial
-    if (_isRecording)
- SafeArea(
-  top: false,
-  bottom: !kbOpen,
-  child: Container(
-    width: double.infinity,
-    color: isDark ? const Color(0xFF121212) : Colors.white.withOpacity(0.90),
-    padding: EdgeInsets.only(
-      left: 8.0,
-      right: 8.0,
-      top: 6.0,
-      bottom: kbOpen ? 0.0 : 40.0, // 0 si teclado abierto, 40 si cerrado
-    ),
-    child: _buildRecordingMode(),
-  ),
-)
-    else
-      _buildNormalInput(),
-  ],
-                );
-              }),
+                                // 🔹 Si estoy grabando, muestro la barra especial
+                                if (_isRecording)
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+                                    child: _buildRecordingMode(),
+                                  )
+                                else
+                                  _buildNormalInput(),
+                              ],
+                            );
+                          }),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               
   // Eliminado el overlay global de PointerUp (se maneja en gestos locales)
-              ],
-            ),
+
           ),
         ),
       ),
@@ -506,146 +529,112 @@ final bool kbOpen = MediaQuery.of(context).viewInsets.bottom > 0;
   Widget _buildNormalInput() {
     final bool kbOpen = MediaQuery.of(context).viewInsets.bottom > 0;
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color iconsColor = isDark ? Colors.white70 : iconColor;
+    final Color iconsColor = isDark ? Colors.grey[400]! : Colors.grey[600]!;
+    
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
       child: SafeArea(
         top: false,
-        bottom: !kbOpen,
+        bottom: false, // Handled by parent padding
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end, // Align to bottom for multi-line
           children: [
+            // Attachment Button
             GestureDetector(
-              // Sensibilidad inmediata tipo mic: reaccionar en onTapDown
               onTapDown: (_) => _showAttachmentMenu(),
               child: Container(
-                width: 48,
-                height: 48,
+                width: 44,
+                height: 44,
                 alignment: Alignment.center,
-                child: SvgIcon(
-                  'assets/icons/attachment.svg',
-                  width: 28,
+                child: Icon(
+                  Icons.attach_file_rounded,
                   color: iconsColor,
+                  size: 26,
                 ),
               ),
             ),
-            const SizedBox(width: 4),
+            // Input Field
             Expanded(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    if (!isDark) BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
-                  ],
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: controller.textController,
-                        focusNode: controller.chatFocusNode,
-                        onChanged: (v) {
-                          _handleTextChange(v);
-                          controller.isTextMsg.value = v.trim().isNotEmpty;
-                        },
-                        maxLines: 5,
-                        minLines: 1,
-                         style: TextStyle(color: isDark ? Colors.white : Colors.black87),
-                         cursorColor: isDark ? Colors.white : Colors.black,
-                         decoration: InputDecoration(
-                          hintText: controller.isEditing
-                              ? 'Editar mensaje...'
-                              : 'Mensaje',
-                           hintStyle: TextStyle(color: isDark ? Colors.white60 : Colors.grey[600]),
-                           filled: false,
-                           fillColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                          border: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          errorBorder: InputBorder.none,
-                          disabledBorder: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ),
+                constraints: const BoxConstraints(maxHeight: 120),
+                padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+                child: TextField(
+                  controller: controller.textController,
+                  focusNode: controller.chatFocusNode,
+                  onChanged: (v) {
+                    _handleTextChange(v);
+                    controller.isTextMsg.value = v.trim().isNotEmpty;
+                  },
+                  maxLines: null, // Auto-grow
+                  minLines: 1,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black,
+                    fontSize: 16,
+                  ),
+                  cursorColor: primaryColor,
+                  decoration: InputDecoration(
+                    hintText: controller.isEditing ? 'Edit message...' : 'Message',
+                    hintStyle: TextStyle(
+                      color: isDark ? Colors.grey[600] : Colors.grey[500],
+                      fontSize: 16,
                     ),
-                    const SizedBox(width: 4),
-                  ],
+                    filled: false,
+                    border: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(width: 8),
-            // Botón derecho: check si editando, enviar si hay texto, mic si vacío y no editando
+            // Send / Mic Button
             controller.editingMessage.value != null
                 ? GestureDetector(
                     onTap: () async {
                       await controller.saveEditedMessage();
                       if (mounted) setState(() => _isTextMsg = false);
                     },
-                                          child: Container(
-                        width: 48,
-                        height: 48,
-                         decoration: BoxDecoration(
-                           color: isDark ? Colors.white : const Color(0xFF000000),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                         child: Icon(Icons.check_rounded, color: isDark ? Colors.black : Colors.white, size: 24),
-                      ),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      alignment: Alignment.center,
+                      child: Icon(Icons.check_circle, color: primaryColor, size: 32),
                     ),
                   )
                 : _isTextMsg
-                ? GestureDetector(
-                    onTap: _handleSend,
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.white : primaryColor,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: SvgIcon(
-                          'assets/icons/arrow-up.svg',
-                          width: 24,
-                          height: 24,
-                          color: isDark ? Colors.black : Colors.white,
+                    ? GestureDetector(
+                        onTap: _handleSend,
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          alignment: Alignment.center,
+                          child: Icon(Icons.send_rounded, color: primaryColor, size: 28),
                         ),
-                      ),
-                    ),
-                  )
-                // Botón micrófono (solo aparece si NO hay texto)
-                : GestureDetector(
-                    onTapDown: (details) {
-                      _micTapController.forward(from: 0);
-                      // Pequeño retardo para que se vea el pop antes del overlay
-                      Future.delayed(const Duration(milliseconds: 90), () {
-                        if (mounted) _startRecordingInstant(details);
-                      });
-                    },
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: const BoxDecoration(
-                        color: Colors.transparent,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: ScaleTransition(
-                          scale: _micTapScale,
-                          child: SvgIcon(
-                            'assets/icons/microphone.svg',
-                            width: 28,
-                            height: 28,
-                            color: iconsColor,
+                      )
+                    : GestureDetector(
+                        onTapDown: (details) {
+                          _micTapController.forward(from: 0);
+                          Future.delayed(const Duration(milliseconds: 90), () {
+                            if (mounted) _startRecordingInstant(details);
+                          });
+                        },
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          alignment: Alignment.center,
+                          child: ScaleTransition(
+                            scale: _micTapScale,
+                            child: Icon(
+                              Icons.mic_none_rounded,
+                              color: iconsColor,
+                              size: 28,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  )
           ],
         ),
       ),

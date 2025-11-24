@@ -1,14 +1,17 @@
 import 'seen_by.dart';
+import 'story_music.dart';
 
 class StoryVideo {
   final String videoUrl;
   final String thumbnailUrl;
+  final StoryMusic? music; // Música opcional
   List<SeenBy> seenBy;
   final DateTime createdAt;
 
   StoryVideo({
     required this.videoUrl,
     required this.thumbnailUrl,
+    this.music,
     this.seenBy = const [],
     required this.createdAt,
   });
@@ -17,6 +20,9 @@ class StoryVideo {
     return StoryVideo(
       videoUrl: data['videoUrl'] as String,
       thumbnailUrl: data['thumbnailUrl'] as String,
+      music: data['music'] != null 
+          ? StoryMusic.fromMap(data['music'] as Map<String, dynamic>)
+          : null,
       seenBy: SeenBy.seenByFrom(data['seenBy']),
       createdAt: DateTime.fromMillisecondsSinceEpoch(data['createdAt'] as int),
     );
@@ -26,6 +32,7 @@ class StoryVideo {
     return {
       'videoUrl': videoUrl,
       'thumbnailUrl': thumbnailUrl,
+      'music': music?.toMap(),
       'seenBy': seenBy.map((e) => e.toMap()).toList(),
       'createdAt': createdAt.millisecondsSinceEpoch,
     };

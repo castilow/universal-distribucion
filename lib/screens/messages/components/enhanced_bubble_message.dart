@@ -11,6 +11,7 @@ import 'package:chat_messenger/screens/messages/components/reaction_panel.dart';
 import 'package:chat_messenger/screens/messages/components/message_reactions.dart';
 import 'package:chat_messenger/screens/messages/controllers/message_controller.dart';
 import 'package:chat_messenger/theme/app_theme.dart';
+import 'package:chat_messenger/controllers/preferences_controller.dart';
 import 'package:get/get.dart';
 
 import 'bubbles/audio_message.dart';
@@ -154,18 +155,14 @@ class _EnhancedBubbleMessageState extends State<EnhancedBubbleMessage>
     final bool isDarkMode = AppTheme.of(context).isDarkMode;
     final bool isSender = widget.message.isSender;
     
-    // Colores más naturales - Verde claro para todos los mensajes
+    // Usar colores personalizados si existen, sino usar los por defecto
+    final PreferencesController prefController = Get.find();
     final Color backgroundColor = isSender
-        ? const Color(0xFFDCF8C6) // Verde claro para emisor (como WhatsApp)
-        : isDarkMode
-            ? const Color(0xFF2A2A2A)
-            : const Color(0xFFDCF8C6); // Verde claro para receptor también
+        ? prefController.getSentBubbleColor()
+        : prefController.getReceivedBubbleColor(isDarkMode);
     
-    final Color textColor = isSender
-        ? Colors.white
-        : isDarkMode
-            ? Colors.white
-            : Colors.black87;
+    // Calcular color de texto automático basado en el color de fondo
+    final Color textColor = PreferencesController.getContrastTextColor(backgroundColor);
 
     return Container(
       margin: EdgeInsets.only(
@@ -177,15 +174,17 @@ class _EnhancedBubbleMessageState extends State<EnhancedBubbleMessage>
         crossAxisAlignment: isSender ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           // Mensaje principal
-          Container(
+          Obx(() {
+            final double radius = prefController.customBubbleRadius.value;
+            return Container(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
             decoration: BoxDecoration(
               color: backgroundColor,
               borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(!isSender ? 20 : 20),
-                topRight: Radius.circular(isSender ? 20 : 20),
-                bottomLeft: const Radius.circular(20),
-                bottomRight: const Radius.circular(20),
+                  topLeft: Radius.circular(!isSender ? 16 : radius),
+                  topRight: Radius.circular(isSender ? 16 : radius),
+                  bottomLeft: Radius.circular(radius),
+                  bottomRight: Radius.circular(radius),
               ),
               boxShadow: [
                 BoxShadow(
@@ -260,7 +259,8 @@ class _EnhancedBubbleMessageState extends State<EnhancedBubbleMessage>
                 _showMessageContent(''),
               ],
             ),
-          ),
+          );
+          }),
           
           // Estado del mensaje
           Padding(
