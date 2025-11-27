@@ -35,10 +35,10 @@ abstract class AppConfig {
   ///
   /// <-- GIF API Configuration -->
   ///
-  static const String gifAPiKey = "wKeA54tB1p5yPFj573XvppXKA8yIr9L8";
+  static const String gifAPiKey = "qosVVYfxktYlIzDahp6AdrDBwUwErgb9";
 
   /// GIPHY API Key
-  static const String giphyApiKey = "wKeA54tB1p5yPFj573XvppXKA8yIr9L8";
+  static const String giphyApiKey = "qosVVYfxktYlIzDahp6AdrDBwUwErgb9";
 
   ///
   /// <-- Music API Configuration -->
@@ -62,4 +62,22 @@ abstract class AppConfig {
   // iOS Ad Units
   static const String iOsBannerID = "ca-app-pub-xxxxxxxxxxxxxxxx/yyyyyyyyyy";
   static const String iOsInterstitialID = "ca-app-pub-xxxxxxxxxxxxxxxx/yyyyyyyyyy";
+
+  ///
+  /// <-- Image Filters API Configuration -->
+  ///
+  
+  /// Cloudinary Configuration (recomendado - muchos filtros profesionales)
+  /// Regístrate en: https://cloudinary.com (plan gratuito disponible)
+  static const String cloudinaryCloudName = "your-cloud-name";
+  static const String cloudinaryApiKey = "your-api-key";
+  static const String cloudinaryApiSecret = "your-api-secret";
+  
+  /// Imgix Configuration (alternativa rápida)
+  /// Regístrate en: https://imgix.com
+  static const String imgixDomain = "your-domain.imgix.net";
+  static const String imgixApiKey = "your-imgix-api-key";
+  
+  /// API Personalizada (opcional - para tu propio servicio)
+  static const String customFiltersApiUrl = "https://your-api.com/filters";
 }

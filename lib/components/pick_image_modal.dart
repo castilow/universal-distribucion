@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:chat_messenger/config/theme_config.dart';
 import 'package:chat_messenger/helpers/permission_helper.dart';
+import 'package:chat_messenger/screens/edit_photo/edit_photo_screen.dart';
 
 class PickImageModal extends StatelessWidget {
   const PickImageModal({super.key, required this.isAvatar});
@@ -121,7 +122,18 @@ class PickImageModal extends StatelessWidget {
                 File? croppedImage = await _pickAndCropImage(
                   ImageSource.gallery,
                 );
-                Get.back(result: croppedImage);
+                if (croppedImage != null) {
+                  // Mostrar pantalla de edición con filtros
+                  final File? editedImage = await Get.to<File>(
+                    () => EditPhotoScreen(
+                      imageFile: croppedImage,
+                      onSave: (File? file) {},
+                    ),
+                  );
+                  Get.back(result: editedImage ?? croppedImage);
+                } else {
+                  Get.back();
+                }
               } else {
                 Get.back(); // Cerrar modal si no hay permisos
               }
@@ -146,7 +158,18 @@ class PickImageModal extends StatelessWidget {
                 File? croppedImage = await _pickAndCropImage(
                   ImageSource.camera,
                 );
-                Get.back(result: croppedImage);
+                if (croppedImage != null) {
+                  // Mostrar pantalla de edición con filtros
+                  final File? editedImage = await Get.to<File>(
+                    () => EditPhotoScreen(
+                      imageFile: croppedImage,
+                      onSave: (File? file) {},
+                    ),
+                  );
+                  Get.back(result: editedImage ?? croppedImage);
+                } else {
+                  Get.back();
+                }
               } else {
                 Get.back(); // Cerrar modal si no hay permisos
               }

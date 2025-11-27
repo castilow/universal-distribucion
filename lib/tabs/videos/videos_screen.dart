@@ -1,7 +1,10 @@
 import 'dart:io';
 import 'dart:ui';
+import 'dart:async';
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:get/get.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter_iconly/flutter_iconly.dart';
@@ -1509,7 +1512,7 @@ void _showVideoOptionsMenu(
   );
   }
 
-class _CameraUploadScreen extends StatelessWidget {
+class _CameraUploadScreen extends StatefulWidget {
   final VideosController controller;
   final bool isDarkMode;
 
@@ -1519,113 +1522,397 @@ class _CameraUploadScreen extends StatelessWidget {
   });
 
   @override
+  State<_CameraUploadScreen> createState() => _CameraUploadScreenState();
+}
+
+class _CameraUploadScreenState extends State<_CameraUploadScreen> with WidgetsBindingObserver {
+  CameraController? _cameraController;
+  List<CameraDescription> _cameras = [];
+  int _selectedCameraIdx = 0;
+  bool _isInitialized = false;
+  bool _isRecording = false;
+  bool _isFlashOn = false;
+  bool _hasError = false;
+  String _errorMessage = '';
+  Timer? _recordingTimer;
+  int _recordingDuration = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _initializeCamera();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _recordingTimer?.cancel();
+    _cameraController?.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final CameraController? cameraController = _cameraController;
+
+    // App state changed before we got the chance to initialize.
+    if (cameraController == null || !cameraController.value.isInitialized) {
+      return;
+    }
+
+    if (state == AppLifecycleState.inactive) {
+      cameraController.dispose();
+    } else if (state == AppLifecycleState.resumed) {
+      _initializeCamera();
+    }
+  }
+
+  Future<void> _initializeCamera() async {
+    try {
+      // Request permissions
+      Map<Permission, PermissionStatus> statuses = await [
+        Permission.camera,
+        Permission.microphone,
+      ].request();
+
+      if (statuses[Permission.camera] != PermissionStatus.granted ||
+          statuses[Permission.microphone] != PermissionStatus.granted) {
+        if (mounted) {
+          setState(() {
+            _hasError = true;
+            _errorMessage = 'Se requieren permisos de cámara y micrófono';
+          });
+        }
+        return;
+      }
+
+      _cameras = await availableCameras();
+      if (_cameras.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _hasError = true;
+            _errorMessage = 'No se detectó ninguna cámara';
+          });
+        }
+        return;
+      }
+
+      _initController(_cameras[_selectedCameraIdx]);
+    } catch (e) {
+      debugPrint('Error initializing camera: $e');
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+          _errorMessage = 'Error al iniciar la cámara: $e';
+        });
+      }
+    }
+  }
+
+  Future<void> _initController(CameraDescription cameraDescription) async {
+    final CameraController cameraController = CameraController(
+      cameraDescription,
+      ResolutionPreset.high,
+      enableAudio: true,
+      imageFormatGroup: Platform.isAndroid ? ImageFormatGroup.jpeg : ImageFormatGroup.bgra8888,
+    );
+
+    _cameraController = cameraController;
+
+    try {
+      await cameraController.initialize();
+      if (!mounted) return;
+      setState(() {
+        _isInitialized = true;
+      });
+    } catch (e) {
+      debugPrint('Error initializing camera controller: $e');
+    }
+  }
+
+  void _switchCamera() {
+    if (_cameras.length < 2) return;
+    _selectedCameraIdx = (_selectedCameraIdx + 1) % _cameras.length;
+    _initController(_cameras[_selectedCameraIdx]);
+  }
+
+  void _toggleFlash() {
+    if (_cameraController == null) return;
+    _isFlashOn = !_isFlashOn;
+    _cameraController!.setFlashMode(_isFlashOn ? FlashMode.torch : FlashMode.off);
+    setState(() {});
+  }
+
+  Future<void> _startRecording() async {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) return;
+    if (_isRecording) return;
+
+    try {
+      await _cameraController!.startVideoRecording();
+      setState(() {
+        _isRecording = true;
+        _recordingDuration = 0;
+      });
+      
+      _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        setState(() {
+          _recordingDuration++;
+        });
+      });
+    } catch (e) {
+      debugPrint('Error starting recording: $e');
+    }
+  }
+
+  Future<void> _stopRecording() async {
+    if (_cameraController == null || !_isRecording) return;
+
+    try {
+      final XFile videoFile = await _cameraController!.stopVideoRecording();
+      _recordingTimer?.cancel();
+      setState(() {
+        _isRecording = false;
+      });
+
+      if (mounted) {
+        await _showCaptionDialog(context, widget.controller, File(videoFile.path), widget.isDarkMode);
+      }
+    } catch (e) {
+      debugPrint('Error stopping recording: $e');
+    }
+  }
+
+  Future<void> _pickFromGallery() async {
+    try {
+      final File? videoFile = await MediaHelper.pickVideo();
+      if (videoFile != null && mounted) {
+        await _showCaptionDialog(context, widget.controller, videoFile, widget.isDarkMode);
+      }
+    } catch (e) {
+      DialogHelper.showSnackbarMessage(
+        SnackMsgType.error,
+        'Error al seleccionar video: ${e.toString()}',
+      );
+    }
+  }
+
+  String _formatDuration(int seconds) {
+    final int minutes = seconds ~/ 60;
+    final int remainingSeconds = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black,
-      child: Stack(
+    if (_hasError) {
+      return Container(
+        color: Colors.black,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                _errorMessage,
+                style: const TextStyle(color: Colors.white),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: _pickFromGallery,
+                icon: const Icon(IconlyBold.image),
+                label: const Text('Subir de Galería'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00E5FF),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _hasError = false;
+                    _errorMessage = '';
+                  });
+                  _initializeCamera();
+                },
+                child: const Text('Reintentar', style: TextStyle(color: Colors.white54)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (!_isInitialized || _cameraController == null) {
+      return Container(
+        color: Colors.black,
+        child: const Center(
+          child: CircularProgressIndicator(color: Color(0xFF00E5FF)),
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
         fit: StackFit.expand,
         children: [
-          // Background with blur/gradient
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  const Color(0xFF00E5FF).withOpacity(0.1),
-                  Colors.black,
-                  const Color(0xFFB345F1).withOpacity(0.1),
-                ],
+          // Camera Preview
+          Center(
+            child: CameraPreview(_cameraController!),
+          ),
+
+          // Top Controls
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Flash Toggle
+                    IconButton(
+                      icon: Icon(
+                        _isFlashOn ? Icons.flash_on : Icons.flash_off,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                      onPressed: _toggleFlash,
+                    ),
+                    
+                    // Recording Timer
+                    if (_isRecording)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _formatDuration(_recordingDuration),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      
+                    // Placeholder for symmetry or settings
+                    const SizedBox(width: 48),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Bottom Controls
+          SafeArea(
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 32, left: 24, right: 24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    // Gallery Button
+                    if (!_isRecording)
+                    GestureDetector(
+                      onTap: _pickFromGallery,
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.white, width: 2),
+                          borderRadius: BorderRadius.circular(8),
+                          image: const DecorationImage(
+                            image: AssetImage('assets/images/app_logo.png'), // Placeholder or last image
+                            fit: BoxFit.cover,
+                            opacity: 0.8,
+                          ),
+                        ),
+                        child: const Icon(Icons.add, color: Colors.white),
+                      ),
+                    ) else const SizedBox(width: 48),
+
+                    // Record Button
+                    GestureDetector(
+                      onTap: () {
+                        if (_isRecording) {
+                          _stopRecording();
+                        } else {
+                          _startRecording();
+                        }
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: _isRecording ? 80 : 72,
+                        height: _isRecording ? 80 : 72,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 4,
+                          ),
+                        ),
+                        child: Center(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: _isRecording ? 40 : 60,
+                            height: _isRecording ? 40 : 60,
+                            decoration: BoxDecoration(
+                              color: _isRecording ? Colors.red : const Color(0xFF00E5FF),
+                              shape: _isRecording ? BoxShape.rectangle : BoxShape.circle,
+                              borderRadius: _isRecording ? BorderRadius.circular(8) : null,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Switch Camera Button
+                    if (!_isRecording)
+                    IconButton(
+                      icon: const Icon(
+                        Icons.flip_camera_ios_rounded,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                      onPressed: _switchCamera,
+                    ) else const SizedBox(width: 48),
+                  ],
+                ),
               ),
             ),
           ),
           
-          // Content
-          SafeArea(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text(
-                  'Crear Nuevo Video',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Comparte tus momentos con el mundo',
-                  style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 60),
-                
-                // Camera Option
-                _BigOptionButton(
-                  icon: IconlyBold.camera,
-                  label: 'Grabar Video',
-                  color: const Color(0xFF00E5FF),
-                  onTap: () async {
-                    HapticFeedback.mediumImpact();
-                    try {
-                      final File? videoFile = await MediaHelper.getVideoFromCamera();
-                      if (videoFile != null && Get.context != null) {
-                        await _showCaptionDialog(Get.context!, controller, videoFile, isDarkMode);
-                      }
-                    } catch (e) {
-                      DialogHelper.showSnackbarMessage(
-                        SnackMsgType.error,
-                        'Error al grabar video: ${e.toString()}',
-                      );
-                    }
-                  },
-                ),
-                
-                const SizedBox(height: 32),
-                
-                // Gallery Option
-                _BigOptionButton(
-                  icon: IconlyBold.image,
-                  label: 'Subir de Galería',
-                  color: const Color(0xFFB345F1),
-                  onTap: () async {
-                    HapticFeedback.mediumImpact();
-                    try {
-                      final File? videoFile = await MediaHelper.pickVideo();
-                      if (videoFile != null && Get.context != null) {
-                        await _showCaptionDialog(Get.context!, controller, videoFile, isDarkMode);
-                      }
-                    } catch (e) {
-                      DialogHelper.showSnackbarMessage(
-                        SnackMsgType.error,
-                        'Error al seleccionar video: ${e.toString()}',
-                      );
-                    }
-                  },
-                ),
-                
-                const SizedBox(height: 60),
-                
-                // Back hint
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.arrow_forward_ios, color: Colors.white30, size: 14),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Desliza para volver',
-                      style: TextStyle(
-                        color: Colors.white30,
-                        fontSize: 14,
-                      ),
+          // Back Hint
+          if (!_isRecording)
+          Positioned(
+            bottom: 120,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.arrow_forward_ios, color: Colors.white30, size: 12),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Desliza para volver',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.5),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],

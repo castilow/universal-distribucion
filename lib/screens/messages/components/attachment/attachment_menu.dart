@@ -10,6 +10,7 @@ import 'package:chat_messenger/models/message.dart';
 import 'package:chat_messenger/screens/messages/controllers/message_controller.dart';
 import 'package:get/get.dart';
 import 'package:wechat_assets_picker/wechat_assets_picker.dart';
+import 'package:giphy_get/giphy_get.dart';
 import 'widgets/attachment_button.dart';
 import 'widgets/preview_attachment.dart';
 
@@ -120,72 +121,96 @@ class _AttachmentMenuState extends State<AttachmentMenu> {
 
               // Attachment options
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Center(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            // <--- Attach File --->
-                            AttachmentButton(
-                              icon: IconlyBold.document,
-                              title: 'Document',
-                              color: primaryColor.withOpacity(0.2),
-                              onPress: _handleDocumentPicker,
-                            ),
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      // <--- Attach File --->
+                      AttachmentButton(
+                        icon: IconlyBold.document,
+                        title: 'Document',
+                        color: primaryColor.withOpacity(0.2),
+                        onPress: _handleDocumentPicker,
+                      ),
 
-                            // <--- Send image --->
-                            AttachmentButton(
-                              icon: IconlyBold.image,
-                              title: 'Image',
-                              color: primaryColor.withOpacity(0.2),
-                              onPress: _handleImagePicker,
-                            ),
+                      const SizedBox(width: 8),
 
-                            // <--- Send video --->
-                            AttachmentButton(
-                              icon: IconlyBold.video,
-                              title: 'Video',
-                              color: primaryColor.withOpacity(0.2),
-                              onPress: () async {
-                                // Close this modal
-                                Get.back();
+                      // <--- Send image --->
+                      AttachmentButton(
+                        icon: IconlyBold.image,
+                        title: 'Image',
+                        color: primaryColor.withOpacity(0.2),
+                        onPress: _handleImagePicker,
+                      ),
 
-                                // Pick video file from gallery
-                                final video = await MediaHelper.pickVideo();
+                      const SizedBox(width: 8),
 
-                                if (video == null) return;
+                      // <--- Send GIF --->
+                      AttachmentButton(
+                        icon: Icons.gif_box,
+                        title: 'GIF',
+                        color: primaryColor.withOpacity(0.2),
+                        onPress: () async {
+                          // Close this modal
+                          Get.back();
 
-                                // Send video
-                                widget.sendVideo(video);
-                              },
-                            ),
+                          // Get GIF from GIPHY
+                          final gif = await MediaHelper.getGif();
 
-                            // <--- Share Location --->
-                            AttachmentButton(
-                              icon: IconlyBold.location,
-                              title: 'Location',
-                              color: primaryColor.withOpacity(0.2),
-                              onPress: () async {
-                                // Close this modal
-                                Get.back();
+                          if (gif == null) return;
 
-                                final Location? position =
-                                    await AppHelper.getUserCurrentLocation();
+                          // Send GIF using the URL from GIPHY
+                          messageController.sendMessage(
+                            MessageType.gif,
+                            gifUrl: gif.images?.original?.url ?? gif.images?.fixedHeight?.url ?? '',
+                          );
+                        },
+                      ),
 
-                                if (position == null) return;
+                      const SizedBox(width: 8),
 
-                                // Send location
-                                widget.sendLocation(position);
-                              },
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                      ],
-                    ),
+                      // <--- Send video --->
+                      AttachmentButton(
+                        icon: IconlyBold.video,
+                        title: 'Video',
+                        color: primaryColor.withOpacity(0.2),
+                        onPress: () async {
+                          // Close this modal
+                          Get.back();
+
+                          // Pick video file from gallery
+                          final video = await MediaHelper.pickVideo();
+
+                          if (video == null) return;
+
+                          // Send video
+                          widget.sendVideo(video);
+                        },
+                      ),
+
+                      const SizedBox(width: 8),
+
+                      // <--- Share Location --->
+                      AttachmentButton(
+                        icon: IconlyBold.location,
+                        title: 'Location',
+                        color: primaryColor.withOpacity(0.2),
+                        onPress: () async {
+                          // Close this modal
+                          Get.back();
+
+                          final Location? position =
+                              await AppHelper.getUserCurrentLocation();
+
+                          if (position == null) return;
+
+                          // Send location
+                          widget.sendLocation(position);
+                        },
+                      ),
+                    ],
                   ),
                 ),
               ),
