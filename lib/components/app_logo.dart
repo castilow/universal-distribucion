@@ -32,7 +32,7 @@ class AppLogo extends StatelessWidget {
       ),
       child: ClipOval(
         child: Image.asset(
-          'assets/images/app_icon.png',
+          'assets/images/app_logo.png',
           width: logoSize,
           height: logoSize,
           fit: BoxFit.cover,

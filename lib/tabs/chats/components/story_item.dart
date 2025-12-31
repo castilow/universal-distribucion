@@ -42,14 +42,14 @@ class StoryItem extends StatelessWidget {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          Color(0xFF00E5FF), // Cyan
-                          Color(0xFF2979FF), // Blue
-                          Color(0xFF6228D7), // Purple
+                          primaryColor, // Gold
+                          secondaryColor, // Dark Gold
+                          primaryDark, // Deep Gold
                         ],
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF2979FF).withOpacity(0.3),
+                          color: primaryColor.withOpacity(0.3),
                           blurRadius: 8,
                           spreadRadius: 1,
                         ),
@@ -79,7 +79,7 @@ class StoryItem extends StatelessWidget {
                       width: 22,
                       height: 22,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF00E5FF),
+                        color: primaryColor,
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: Theme.of(context).scaffoldBackgroundColor,

@@ -140,8 +140,8 @@ class _SigninOrSignupScreenState extends State<SigninOrSignupScreen>
                   
                   // Custom logo image without shadow
                   SizedBox(
-                    width: 220,
-                    height: 220,
+                    width: 280,
+                    height: 280,
                     child: Image.asset(
                       'assets/images/logologun.png',
                       fit: BoxFit.contain,

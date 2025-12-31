@@ -1,6 +1,6 @@
 plugins {
     id "com.android.application"
-    id 'com.google.gms.google-services'
+    // id 'com.google.gms.google-services' // Comentado temporalmente para generar APK
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
 }
@@ -32,7 +32,7 @@ if (flutterVersionName == null) {
 // }
 
 android {
-    namespace "com.klinks.app"
+    namespace "com.universaldist.app"
     compileSdkVersion 35
     ndkVersion "27.0.12077973"
 
@@ -53,7 +53,7 @@ android {
 
     defaultConfig {
         // Application ID alineado con Firebase
-        applicationId "com.klinks.app"
+        applicationId "com.universaldist.app"
         minSdkVersion 24
         targetSdkVersion 35
         multiDexEnabled true

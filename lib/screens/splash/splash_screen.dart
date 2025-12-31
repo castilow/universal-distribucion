@@ -20,8 +20,8 @@ class SplashScreen extends StatelessWidget {
       backgroundColor: isDarkMode ? darkThemeBgColor : lightThemeBgColor,
       body: Center(
         child: SizedBox(
-          width: 160,
-          height: 160,
+          width: 220,
+          height: 220,
           child: Image.asset(
             'assets/images/app_logo.png',
             fit: BoxFit.contain,

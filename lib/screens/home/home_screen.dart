@@ -25,6 +25,8 @@ import '../messages/controllers/message_controller.dart';
 import 'package:chat_messenger/components/global_search_bar.dart';
 import 'package:chat_messenger/components/klink_ai_button.dart';
 import 'package:chat_messenger/components/common_header.dart';
+import 'package:chat_messenger/config/theme_config.dart';
+import 'package:chat_messenger/tabs/products/add_product_screen.dart';
 import 'dart:ui' as ui;
 
 class HomeScreen extends StatefulWidget {
@@ -40,6 +42,7 @@ class _HomeScreenState extends State<HomeScreen>
   late AnimationController _sessionBtnController;
   late AnimationController _calendarButtonController;
   late AnimationController _addButtonController;
+  late AnimationController _pulseController;
 
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -77,6 +80,11 @@ class _HomeScreenState extends State<HomeScreen>
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
+
+    _pulseController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    )..repeat(reverse: true);
 
 
 
@@ -133,6 +141,7 @@ class _HomeScreenState extends State<HomeScreen>
     _sessionBtnController.dispose();
     _calendarButtonController.dispose();
     _addButtonController.dispose();
+    _pulseController.dispose();
 
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -172,6 +181,86 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
+  // Helper para construir items de navegación con animación
+  Widget _buildNavItem({
+    required int index,
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required bool isDarkMode,
+    required VoidCallback onTap,
+    bool hasBadge = false,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Icono con escala animada
+            AnimatedScale(
+              scale: isSelected ? 1.1 : 1.0,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutBack,
+              child: SizedBox(
+                height: 24,
+                width: 24,
+                child: Stack(
+                  alignment: Alignment.center,
+                  clipBehavior: Clip.none,
+                  children: [
+                    Icon(
+                      icon,
+                      size: 24,
+                      color: isSelected
+                          ? primaryColor // Gold
+                          : (isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                    ),
+                    if (hasBadge)
+                      Positioned(
+                        top: -2,
+                        right: -2,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 4),
+            
+            // Texto Label Animado
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
+              style: TextStyle(
+                color: isSelected
+                    ? primaryColor
+                    : (isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                letterSpacing: -0.2,
+                fontFamily: 'Inter', // Asegurando fuente si está disponible, o default
+              ),
+              child: Text(label),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Get Controllers
@@ -191,7 +280,7 @@ class _HomeScreenState extends State<HomeScreen>
       return Scaffold(
         extendBody: true,
         extendBodyBehindAppBar: true,
-        appBar: (pageIndex == 4 || pageIndex == 2) 
+        appBar: (pageIndex == 4 || pageIndex == 2 || pageIndex == 0) 
           ? null 
           : PreferredSize(
           preferredSize: const Size.fromHeight(80),
@@ -206,11 +295,15 @@ class _HomeScreenState extends State<HomeScreen>
                     GestureDetector(
                       onTap: () {
                         HapticFeedback.lightImpact();
-                        Get.toNamed(AppRoutes.profile);
+                        Get.toNamed(AppRoutes.settings);
                       },
-                      child: SizedBox(
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
                         width: 40,
                         height: 40,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                        ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(20),
                           child: CachedCircleAvatar(
@@ -256,11 +349,7 @@ class _HomeScreenState extends State<HomeScreen>
                   if (!_isSearchActive) ...[
                     const SizedBox(width: 12),
                     
-                    // Plus button (solo en página de chats - pageIndex == 0)
-                    if (pageIndex == 0) ...[
-                      const SizedBox(width: 12),
-                      const KlinkAIButton(),
-                    ],
+
                     
                     const SizedBox(width: 12),
                     
@@ -365,112 +454,224 @@ class _HomeScreenState extends State<HomeScreen>
             ],
           ),
         ),
-        bottomNavigationBar: _isSearchActive 
-          ? null 
-          : Container(
-              decoration: BoxDecoration(
-                color: isDarkMode 
-                    ? const Color(0xFF0F172A).withOpacity(0.85) // Slate 900 with opacity
-                    : const Color(0xFFFFFFFF).withOpacity(0.85),
-                border: Border(
-                  top: BorderSide(
-                    color: isDarkMode 
-                        ? Colors.white.withOpacity(0.05) 
-                        : Colors.black.withOpacity(0.05),
-                    width: 0.5,
-                  ),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: isDarkMode
-                        ? Colors.black.withOpacity(0.4)
-                        : const Color(0xFF64748B).withOpacity(0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, -5),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                // Add blur effect
-                child: BackdropFilter(
-                  filter:  ui.ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-                  child: Theme(
-                    data: Theme.of(context).copyWith(
-                      splashColor: Colors.transparent,
-                      highlightColor: Colors.transparent,
-                      hoverColor: Colors.transparent,
-                      focusColor: Colors.transparent,
-                    ),
-                    child: BottomNavigationBar(
-                      backgroundColor: Colors.transparent,
-                      elevation: 0,
-                      currentIndex: pageIndex,
-                      onTap: (int index) {
-                        HapticFeedback.selectionClick();
-                        homeController.pageIndex.value = index;
-                      },
-                      type: BottomNavigationBarType.fixed,
-                      selectedLabelStyle: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                        letterSpacing: -0.2,
+        bottomNavigationBar: _isSearchActive
+            ? null
+            : Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 30),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.bottomCenter,
+                  children: [
+                    // 1. GLASS BAR CONTAINER
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(30),
+                      child: BackdropFilter(
+                        filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        child: Container(
+                          height: 70,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF141414).withOpacity(0.85),
+                            borderRadius: BorderRadius.circular(30),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.1),
+                              width: 0.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.4),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _buildNavItem(
+                                index: 0,
+                                icon: pageIndex == 0 ? IconlyBold.home : IconlyLight.home,
+                                label: 'Inicio',
+                                isSelected: pageIndex == 0,
+                                isDarkMode: isDarkMode,
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  homeController.pageIndex.value = 0;
+                                },
+                              ),
+                              _buildNavItem(
+                                index: 1,
+                                icon: pageIndex == 1 ? IconlyBold.bag : IconlyLight.bag,
+                                label: 'Pedidos',
+                                isSelected: pageIndex == 1,
+                                isDarkMode: isDarkMode,
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  homeController.pageIndex.value = 1;
+                                },
+                              ),
+                              
+                              const SizedBox(width: 60), // Space for Orb
+                              
+                              _buildNavItem(
+                                index: 3,
+                                icon: pageIndex == 3 ? IconlyBold.category : IconlyLight.category,
+                                label: 'Productos',
+                                isSelected: pageIndex == 3,
+                                isDarkMode: isDarkMode,
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  homeController.pageIndex.value = 3;
+                                },
+                              ),
+                              _buildNavItem(
+                                index: 4,
+                                icon: pageIndex == 4 ? IconlyBold.location : IconlyLight.location,
+                                label: 'Tiendas',
+                                isSelected: pageIndex == 4,
+                                isDarkMode: isDarkMode,
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  homeController.pageIndex.value = 4;
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      unselectedLabelStyle: const TextStyle(
-                        fontWeight: FontWeight.w500,
-                        fontSize: 11,
-                        letterSpacing: -0.2,
-                      ),
-                      selectedItemColor: const Color(0xFF00E5FF), // Premium Cyan
-                      unselectedItemColor: isDarkMode
-                          ? const Color(0xFF94A3B8) // Slate 400
-                          : const Color(0xFF64748B), // Slate 500
-                      items: [
-                        // Chats
-                        BottomNavigationBarItem(
-                          label: 'chats'.tr,
-                          icon: BadgeIndicator(
-                            icon: pageIndex == 0 ? IconlyBold.chat : IconlyLight.chat,
-                            isNew: chatController.newMessage,
-                          ),
-                        ),
-                        // Contacts
-                        BottomNavigationBarItem(
-                          label: 'contacts'.tr,
-                          icon: Icon(
-                            pageIndex == 1 ? IconlyBold.user2 : IconlyLight.user2,
-                          ),
-                        ),
-                        // Videos
-                        BottomNavigationBarItem(
-                          label: '',
-                          icon: Image.asset(
-                            'assets/images/origina.gif',
-                            width: 45,
-                            height: 45,
-                          ),
-                        ),
-                        // Calls
-                        BottomNavigationBarItem(
-                          label: 'calls'.tr,
-                          icon: Icon(
-                            pageIndex == 3 ? IconlyBold.call : IconlyLight.call,
-                          ),
-                        ),
-                        // Settings
-                        BottomNavigationBarItem(
-                          label: 'settings'.tr,
-                          icon: Icon(
-                            pageIndex == 4 ? IconlyBold.setting : IconlyLight.setting,
-                          ),
-                        ),
-                      ],
                     ),
-                  ),
+
+                    // 2. THE ORB (Center Button)
+                    Positioned(
+                      bottom: 25,
+                      child: GestureDetector(
+                        onTap: () {
+                           HapticFeedback.mediumImpact();
+                           _showAdminPinDialog(context);
+                        },
+                        child: AnimatedBuilder(
+                          animation: _pulseController,
+                          builder: (context, child) {
+                            return Container(
+                              width: 75,
+                              height: 75,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.black,
+                                border: Border.all(
+                                  color: const Color(0xFFD4AF37).withOpacity(0.8), // Gold Border
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  // Inner glow
+                                  BoxShadow(
+                                    color: const Color(0xFFD4AF37).withOpacity(0.3 + (_pulseController.value * 0.2)),
+                                    blurRadius: 15,
+                                    spreadRadius: 2,
+                                  ),
+                                  // Outer shadow
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.5),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 5),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: Container(
+                                  width: 65,
+                                  height: 65,
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        Color(0xFF2A2A2A),
+                                        Colors.black,
+                                      ],
+                                    ),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(10.0),
+                                    child: Image.asset(
+                                      'assets/images/app_logo.png', // Logo as Orb core
+                                      fit: BoxFit.contain,
+                                      errorBuilder: (ctx, err, stack) => const Icon(Icons.token, color: Color(0xFFD4AF37)),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
       );
     });
+  }
+
+  void _showAdminPinDialog(BuildContext context) {
+    final TextEditingController pinController = TextEditingController();
+    
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1E),
+        title: const Text('Acceso Admin', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Ingresa el PIN para agregar productos',
+              style: TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: pinController,
+              keyboardType: TextInputType.number,
+              obscureText: true,
+              style: const TextStyle(color: Colors.white, fontSize: 24, letterSpacing: 8),
+              textAlign: TextAlign.center,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.black.withOpacity(0.3),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                hintText: 'PIN',
+                hintStyle: TextStyle(color: Colors.white.withOpacity(0.3), letterSpacing: 1),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
+          ),
+          TextButton(
+            onPressed: () {
+              if (pinController.text == '1212') {
+                Get.back(); // Close dialog
+                Get.to(() => const AddProductScreen());
+              } else {
+                Get.snackbar(
+                  'Error',
+                  'PIN Incorrecto',
+                  backgroundColor: Colors.redAccent,
+                  colorText: Colors.white,
+                  snackPosition: SnackPosition.TOP,
+                );
+              }
+            },
+            child: const Text('Acceder', style: TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showSearchModal(BuildContext context, bool isDarkMode) {

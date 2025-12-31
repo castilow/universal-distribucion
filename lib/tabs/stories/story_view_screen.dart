@@ -380,12 +380,12 @@ class StoryViewScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF00E5FF).withOpacity(0.2),
+                            color: primaryColor.withOpacity(0.2),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             Icons.music_note,
-                            color: const Color(0xFF00E5FF),
+                            color: primaryColor,
                             size: isTablet ? 24 : 20,
                           ),
                         ),
@@ -425,7 +425,7 @@ class StoryViewScreen extends StatelessWidget {
                               height: 12 + (index % 2 * 8),
                               margin: const EdgeInsets.symmetric(horizontal: 1),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF00E5FF),
+                                color: primaryColor,
                                 borderRadius: BorderRadius.circular(2),
                               ),
                             )
@@ -470,8 +470,8 @@ class StoryViewScreen extends StatelessWidget {
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
                                 colors: [
-                                  Color(0xFF00E5FF), // Cyan
-                                  Color(0xFF2979FF), // Blue
+                                  primaryColor, // Cyan
+                                  secondaryColor, // Blue
                                 ],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
@@ -479,7 +479,7 @@ class StoryViewScreen extends StatelessWidget {
                               borderRadius: BorderRadius.circular(isTablet ? 16 : 12),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFF2979FF).withOpacity(0.4),
+                                  color: secondaryColor.withOpacity(0.4),
                                   blurRadius: 12,
                                   offset: const Offset(0, 4),
                                 ),

@@ -54,7 +54,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1066544431393',
     projectId: 'klink-b0358',
     storageBucket: 'klink-b0358.firebasestorage.app',
-    iosBundleId: 'com.klinks.app',
+    iosBundleId: 'com.universaldist.app',
   );
 
   static const FirebaseOptions web = FirebaseOptions(
@@ -73,7 +73,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1066544431393',
     projectId: 'klink-b0358',
     storageBucket: 'klink-b0358.firebasestorage.app',
-    iosBundleId: 'com.klinks.app',
+    iosBundleId: 'com.universaldist.app',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

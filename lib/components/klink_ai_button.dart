@@ -1,3 +1,4 @@
+import 'package:chat_messenger/config/theme_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:chat_messenger/models/user.dart';
@@ -28,8 +29,8 @@ class _KlinkAIButtonState extends State<KlinkAIButton> with SingleTickerProvider
     );
     
     _glowAnimation = ColorTween(
-      begin: const Color(0xFF00E5FF).withOpacity(0.3),
-      end: const Color(0xFF2979FF).withOpacity(0.6),
+      begin: primaryColor.withOpacity(0.3),
+      end: secondaryColor.withOpacity(0.6),
     ).animate(_controller);
   }
 
@@ -72,7 +73,7 @@ class _KlinkAIButtonState extends State<KlinkAIButton> with SingleTickerProvider
               shape: BoxShape.circle,
               color: Colors.black, // Premium dark background
               border: Border.all(
-                color: const Color(0xFF00E5FF).withOpacity(0.5),
+                color: primaryColor.withOpacity(0.5),
                 width: 1.5,
               ),
               boxShadow: [

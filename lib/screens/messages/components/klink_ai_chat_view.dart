@@ -1,3 +1,4 @@
+import 'package:chat_messenger/config/theme_config.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:chat_messenger/models/user.dart';
@@ -28,11 +29,6 @@ class _KlinkAIChatViewState extends State<KlinkAIChatView> with TickerProviderSt
     // Ensure we don't duplicate if it already exists
     if (Get.isRegistered<MessageController>()) {
       controller = Get.find<MessageController>();
-      // If the existing controller is for a different user/group, we might need to reload or handle it.
-      // But typically MessageScreen handles the put. Since we are inside MessageScreen logic (conditionally),
-      // we should ensure the controller is set up for THIS user.
-      // However, MessageScreen does Get.put BEFORE checking the condition in the original code?
-      // No, I modified MessageScreen to check condition FIRST. So I need to put the controller here.
     } else {
        controller = Get.put(MessageController(isGroup: false, user: widget.user));
     }
@@ -44,21 +40,19 @@ class _KlinkAIChatViewState extends State<KlinkAIChatView> with TickerProviderSt
     )..repeat(reverse: true);
 
     _bgColor1 = ColorTween(
-      begin: const Color(0xFF0F2027),
-      end: const Color(0xFF203A43),
+      begin: Colors.black,
+      end: const Color(0xFF1C1C1C),
     ).animate(_bgController);
 
     _bgColor2 = ColorTween(
-      begin: const Color(0xFF2C5364),
-      end: const Color(0xFF0F2027),
+      begin: const Color(0xFF262626),
+      end: Colors.black,
     ).animate(_bgController);
   }
 
   @override
   void dispose() {
     _bgController.dispose();
-    // Do not dispose controller here if it's managed by GetX pages, but since we did Get.put, we might need to.
-    // Standard MessageScreen relies on GetX to dispose when route pops.
     super.dispose();
   }
 
@@ -122,7 +116,7 @@ class _KlinkAIChatViewState extends State<KlinkAIChatView> with TickerProviderSt
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.cyan.withOpacity(0.5),
+                  color: primaryColor.withOpacity(0.5),
                   blurRadius: 10,
                   spreadRadius: 2,
                 ),
@@ -175,7 +169,7 @@ class _KlinkAIChatViewState extends State<KlinkAIChatView> with TickerProviderSt
   Widget _buildMessageList() {
     return Obx(() {
       if (controller.isLoading.value) {
-        return const Center(child: CircularProgressIndicator(color: Colors.cyan));
+        return const Center(child: CircularProgressIndicator(color: primaryColor));
       }
       
       return AnimationLimiter(
@@ -204,7 +198,7 @@ class _KlinkAIChatViewState extends State<KlinkAIChatView> with TickerProviderSt
                       decoration: BoxDecoration(
                         // Glassmorphism effect
                         color: isMe 
-                            ? const Color(0xFF00E5FF).withOpacity(0.15) 
+                            ? primaryColor.withOpacity(0.15) 
                             : Colors.white.withOpacity(0.08),
                         borderRadius: BorderRadius.only(
                           topLeft: const Radius.circular(18),
@@ -214,7 +208,7 @@ class _KlinkAIChatViewState extends State<KlinkAIChatView> with TickerProviderSt
                         ),
                         border: Border.all(
                           color: isMe 
-                              ? const Color(0xFF00E5FF).withOpacity(0.3) 
+                              ? primaryColor.withOpacity(0.3) 
                               : Colors.white.withOpacity(0.1),
                           width: 1,
                         ),

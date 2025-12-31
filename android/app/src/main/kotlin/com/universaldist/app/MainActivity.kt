@@ -1,20 +1,6 @@
-package com.klinks.app
+package com.universaldist.app
 
 import io.flutter.embedding.android.FlutterActivity
 
 class MainActivity : FlutterActivity()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

@@ -1,3 +1,4 @@
+import 'package:chat_messenger/config/theme_config.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:chat_messenger/controllers/background_controller.dart';
@@ -59,7 +60,7 @@ class BackgroundSelectionScreen extends StatelessWidget {
                                 isDarkMode,
                               ),
                               _buildMockMessage(
-                                'The turquoise theme is 🔥',
+                                'The gold theme is 🔥',
                                 true,
                                 isDarkMode,
                               ),
@@ -135,7 +136,7 @@ class BackgroundSelectionScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: isMe
-              ? const Color(0xFF00E5FF) // Premium Cyan
+              ? primaryColor // Premium Gold
               : (isDarkMode ? const Color(0xFF2C2C2E) : Colors.white),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
@@ -166,7 +167,7 @@ class BackgroundSelectionScreen extends StatelessWidget {
     final List<Color> colors = [
       Colors.white,
       const Color(0xFFF5F5F5),
-      const Color(0xFFE0F7FA), // Light Cyan
+      primaryLight, // Light Gold/Cream
       const Color(0xFFE8F5E9), // Light Green
       const Color(0xFFFFF3E0), // Light Orange
       const Color(0xFFF3E5F5), // Light Purple

@@ -108,7 +108,7 @@ class _VideosScreenState extends State<VideosScreen> with WidgetsBindingObserver
   Widget _buildVideoFeed(BuildContext context, VideosController controller, bool isDarkMode) {
     if (controller.isLoading.value && controller.videos.isEmpty) {
       return const Center(
-        child: CircularProgressIndicator(color: Color(0xFF00E5FF)),
+        child: CircularProgressIndicator(color: primaryColor),
       );
     }
     
@@ -167,7 +167,7 @@ class _VideosScreenState extends State<VideosScreen> with WidgetsBindingObserver
                     border: Border.all(color: Colors.white.withOpacity(0.1)),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF00E5FF).withOpacity(0.2),
+                        color: primaryColor.withOpacity(0.2),
                         blurRadius: 30,
                         spreadRadius: 5,
                       ),
@@ -204,12 +204,12 @@ class _VideosScreenState extends State<VideosScreen> with WidgetsBindingObserver
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF00E5FF), Color(0xFF00B0FF)],
+                        colors: [primaryColor, secondaryColor],
                       ),
                       borderRadius: BorderRadius.circular(30),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF00E5FF).withOpacity(0.4),
+                          color: primaryColor.withOpacity(0.4),
                           blurRadius: 20,
                           offset: const Offset(0, 8),
                         ),
@@ -443,7 +443,7 @@ class _VideoPlayerWidgetState extends State<_VideoPlayerWidget> with SingleTicke
                     )
                   : const Center(
                       child: CircularProgressIndicator(
-                        color: Color(0xFF00E5FF),
+                        color: primaryColor,
                       ),
                     ),
             ),
@@ -565,7 +565,7 @@ class _VideoPlayerWidgetState extends State<_VideoPlayerWidget> with SingleTicke
                                 if (true) // TODO: Check verified status
                                   const Icon(
                                     Icons.verified,
-                                    color: Color(0xFF00E5FF),
+                                    color: primaryColor,
                                     size: 16,
                                   ),
                               ],
@@ -693,7 +693,7 @@ class _VideoPlayerWidgetState extends State<_VideoPlayerWidget> with SingleTicke
                 _playerController!,
                 allowScrubbing: true,
                 colors: const VideoProgressColors(
-                  playedColor: Color(0xFF00E5FF),
+                  playedColor: primaryColor,
                   bufferedColor: Colors.white24,
                   backgroundColor: Colors.white10,
                 ),
@@ -916,7 +916,7 @@ void _showUploadVideoModal(
                 _UploadOption(
                   icon: IconlyBold.camera,
                   label: 'Cámara',
-                  color: const Color(0xFF00E5FF),
+                  color: primaryColor,
                   onTap: () async {
                     Navigator.pop(context);
                     HapticFeedback.mediumImpact();
@@ -1074,7 +1074,7 @@ Future<void> _showCaptionDialog(
           child: const Text(
             'Subir',
             style: TextStyle(
-              color: Color(0xFF00E5FF),
+              color: primaryColor,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1132,7 +1132,7 @@ void _showCommentsModal(BuildContext context, VideosController controller, Strin
               if (controller.isLoadingComments.value) {
                 return const Center(
                   child: CircularProgressIndicator(
-                    color: Color(0xFF00E5FF),
+                    color: primaryColor,
                   ),
                 );
               }
@@ -1258,7 +1258,7 @@ void _showCommentsModal(BuildContext context, VideosController controller, Strin
                     child: TextField(
                       controller: commentController,
                       style: const TextStyle(color: Colors.white),
-                      cursorColor: const Color(0xFF00E5FF),
+                      cursorColor: primaryColor,
                       decoration: InputDecoration(
                         hintText: 'Añadir un comentario...',
                         hintStyle: TextStyle(
@@ -1288,7 +1288,7 @@ void _showCommentsModal(BuildContext context, VideosController controller, Strin
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: const BoxDecoration(
-                      color: Color(0xFF00E5FF),
+                      color: primaryColor,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
@@ -1378,13 +1378,13 @@ void _showShareModal(BuildContext context, VideosController controller, String v
                     trailing: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF00E5FF).withOpacity(0.1),
+                        color: primaryColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Text(
                         'Enviar',
                         style: TextStyle(
-                          color: Color(0xFF00E5FF),
+                          color: primaryColor,
                           fontWeight: FontWeight.w600,
                           fontSize: 12,
                         ),
@@ -1761,7 +1761,7 @@ class _CameraUploadScreenState extends State<_CameraUploadScreen> with WidgetsBi
                 icon: const Icon(IconlyBold.image),
                 label: const Text('Subir de Galería'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00E5FF),
+                  backgroundColor: primaryColor,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -1788,7 +1788,7 @@ class _CameraUploadScreenState extends State<_CameraUploadScreen> with WidgetsBi
       return Container(
         color: Colors.black,
         child: const Center(
-          child: CircularProgressIndicator(color: Color(0xFF00E5FF)),
+          child: CircularProgressIndicator(color: primaryColor),
         ),
       );
     }
@@ -1902,7 +1902,7 @@ class _CameraUploadScreenState extends State<_CameraUploadScreen> with WidgetsBi
                             width: _isRecording ? 40 : 60,
                             height: _isRecording ? 40 : 60,
                             decoration: BoxDecoration(
-                              color: _isRecording ? Colors.red : const Color(0xFF00E5FF),
+                              color: _isRecording ? Colors.red : primaryColor,
                               shape: _isRecording ? BoxShape.rectangle : BoxShape.circle,
                               borderRadius: _isRecording ? BorderRadius.circular(8) : null,
                             ),

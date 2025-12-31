@@ -207,8 +207,30 @@ abstract class UserApi {
   static Future<void> updateUserInfo(User user) async {
     final firebaseUser = AuthController.instance.firebaseUser!;
 
-    // Get device token
-    final String deviceToken = await _firebaseMsg.getToken() ?? '';
+    // Get device token - Manejar error de APNS en iOS
+    String deviceToken = '';
+    try {
+      // En iOS, esperar a que el APNS token esté disponible
+      if (Platform.isIOS) {
+        // Intentar obtener el APNS token primero
+        String? apnsToken = await _firebaseMsg.getAPNSToken();
+        if (apnsToken != null) {
+          // Si hay APNS token, entonces podemos obtener el FCM token
+          deviceToken = await _firebaseMsg.getToken() ?? '';
+        } else {
+          // Si no hay APNS token aún, usar el token existente del usuario o esperar
+          deviceToken = user.deviceToken;
+          debugPrint('⚠️ APNS token no disponible aún, usando token existente');
+        }
+      } else {
+        // Android: obtener token directamente
+        deviceToken = await _firebaseMsg.getToken() ?? '';
+      }
+    } catch (e) {
+      // Si hay error, usar el token existente del usuario
+      deviceToken = user.deviceToken;
+      debugPrint('⚠️ Error obteniendo device token: $e, usando token existente');
+    }
 
     var data = {
       'deviceToken': deviceToken,
@@ -227,7 +249,11 @@ abstract class UserApi {
     // Save data
     await updateUserData(userId: user.userId, data: data, isSet: true);
     // Subscribe for Push Notifications
-    _firebaseMsg.subscribeToTopic('NOTIFY_USERS');
+    try {
+      _firebaseMsg.subscribeToTopic('NOTIFY_USERS');
+    } catch (e) {
+      debugPrint('⚠️ Error suscribiendo a topic: $e');
+    }
   }
 
   /// Update user push token specifically for FCM

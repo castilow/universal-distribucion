@@ -13,7 +13,7 @@
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>
-		<string>Klink</string>
+		<string>Universal Distribución</string>
 		<key>CFBundleExecutable</key>
 		<string>$(EXECUTABLE_NAME)</string>
 		<key>CFBundleIdentifier</key>
@@ -21,7 +21,7 @@
 		<key>CFBundleInfoDictionaryVersion</key>
 		<string>6.0</string>
 		<key>CFBundleName</key>
-		<string>Klink</string>
+		<string>Universal Distribución</string>
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>CFBundleShortVersionString</key>
@@ -35,7 +35,6 @@
 				<string>Editor</string>
 				<key>CFBundleURLSchemes</key>
 				<array>
-					<!-- Google Sign-In URL scheme (REVERSED_CLIENT_ID from GoogleService-Info.plist) -->
 					<string>com.googleusercontent.apps.1066544431393-6t8gr15v53lcvohlu4p7l67c6q712of0</string>
 				</array>
 			</dict>
@@ -48,12 +47,13 @@
 		<true/>
 		<key>GADApplicationIdentifier</key>
 		<string>ca-app-pub-3940256099942544~3347511713</string>
+		<key>GIDClientID</key>
+		<string>1066544431393-6t8gr15v53lcvohlu4p7l67c6q712of0.apps.googleusercontent.com</string>
 		<key>LSApplicationQueriesSchemes</key>
 		<array>
 			<string>https</string>
 			<string>http</string>
 			<string>google</string>
-			<!-- Allow opening Google Sign-In redirect URL -->
 			<string>com.googleusercontent.apps.1066544431393-6t8gr15v53lcvohlu4p7l67c6q712of0</string>
 		</array>
 		<key>LSRequiresIPhoneOS</key>
@@ -119,9 +119,5 @@
 		</array>
 		<key>UIViewControllerBasedStatusBarAppearance</key>
 		<false/>
-
-		<!-- Google Sign-In Client ID -->
-		<key>GIDClientID</key>
-		<string>1066544431393-6t8gr15v53lcvohlu4p7l67c6q712of0.apps.googleusercontent.com</string>
 	</dict>
 </plist>

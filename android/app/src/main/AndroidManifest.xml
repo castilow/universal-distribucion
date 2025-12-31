@@ -62,7 +62,7 @@
         </intent>
     </queries>
     <application
-        android:label="Klink"
+        android:label="Universal Distribución"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon"
         android:extractNativeLibs="true">

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:chat_messenger/config/theme_config.dart';
 import 'package:chat_messenger/models/chat.dart';
 import 'stories_section.dart';
 import 'dart:math' as math;
@@ -76,7 +77,7 @@ class PortalStoriesHeader extends StatelessWidget {
                         color: Theme.of(context).cardColor,
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF00E5FF).withOpacity(0.3 * revealProgress), // Glow effect
+                            color: primaryColor.withOpacity(0.3 * revealProgress), // Glow effect
                             blurRadius: 20 * revealProgress,
                             spreadRadius: 5 * revealProgress,
                           ),

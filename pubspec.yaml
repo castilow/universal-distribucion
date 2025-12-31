@@ -46,6 +46,8 @@ dependencies:
   flutter_svg:          ^2.1.0
   cached_network_image: ^3.3.1
   flutter_local_notifications: ^17.2.3
+  flutter_map: ^5.0.0 # Downgraded for compatibility
+  latlong2: ^0.9.0     # Coordinates
   # ──────────────────── Autenticación Social ────────────────────
   google_sign_in: ^6.2.1
 
@@ -113,6 +115,7 @@ dependencies:
   fl_chart:             ^0.66.2
   flutter_colorpicker:  ^1.0.3
   flutter_staggered_animations: ^1.1.1
+  flutter_animate: ^4.5.2
 
 #######################################################################
 # OVERRIDES (fijamos intl 0.20.2 para TODOS)
@@ -140,6 +143,8 @@ flutter:
   assets:
     - assets/icons/
     - assets/images/
+    - assets/images/dashboard/
+    - assets/images/categories/
     - assets/images/cards/
     - assets/sounds/
     - assets/flags/
@@ -154,7 +159,7 @@ flutter_launcher_icons:
   remove_alpha_ios: true
   image_path: "assets/images/launcher_icon.png"
   min_sdk_android: 24
-  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_background: "#000000"
   adaptive_icon_foreground: "assets/images/launcher_icon.png"
 
 flutter_native_splash:

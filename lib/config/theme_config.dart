@@ -1,41 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-// Klink Brand Colors - Modern Messenger (Telegram-inspired)
-// Klink Brand Colors - Premium Turquoise
-const primaryColor = Color(0xFF00E5FF); // Cyan brillante / Turquesa eléctrico
-const secondaryColor = Color(0xFF00B8D4); // Turquesa más profundo
-const primaryLight = Color(0xFFE0F7FA); // Cyan muy claro
-const primaryDark = Color(0xFF006064); // Cyan muy oscuro
+// Klink Brand Colors - Sun Black & Gold (Elegant)
+const primaryColor = Color(0xFFD4AF37); // Metallic Gold
+const secondaryColor = Color(0xFFB8860B); // Dark Golden Rod
+const primaryLight = Color(0xFFFFF8E1); // Very light gold/cream
+const primaryDark = Color(0xFF8B6508); // Dark Gold
 
 // System Colors
 const Color greyLight = Color(0xFFF8FAFC); // Slate 50
 const Color greyColor = Color(0xFF64748B); // Slate 500
-const Color accentColor = Color(0xFF00E5FF); // Cyan accent
-const Color premiumBlack = Color(0xFF0F172A); // Slate 900
+const Color accentColor = Color(0xFFD4AF37); // Gold accent
+const Color premiumBlack = Color(0xFF000000); // Pure Black
 const Color errorColor = Color(0xFFFF3B30); // iOS Red
 const Color successColor = Color(0xFF34C759); // iOS Green
 const Color warningColor = Color(0xFFFFCC00); // iOS Yellow
 
 // Surface Colors
 const Color surfaceLight = Color(0xFFFFFFFF);
-const Color surfaceDark = Color(0xFF0F172A); // Slate 900 (Rich dark)
+const Color surfaceDark = Color(0xFF000000); // Pure Black
 const Color cardLight = Color(0xFFFFFFFF);
-const Color cardDark = Color(0xFF1E293B); // Slate 800 (Rich dark card)
+const Color cardDark = Color(0xFF0A0A0A); // Nearly black for cards
 
 // Light Theme Colors
-const Color lightThemeBgColor = Color(0xFFF1F5F9); // Slate 100
-const Color lightThemeTextColor = Color(0xFF0F172A); // Slate 900
+const Color lightThemeBgColor = Color(0xFFF8F9FA); // Very light grey
+const Color lightThemeTextColor = Color(0xFF000000); // Black
 const Color lightThemeSecondaryText = Color(0xFF64748B); // Slate 500
 const Color lightDividerColor = Color(0xFFE2E8F0); // Slate 200
 
 // Dark Theme Colors
-const Color darkThemeBgColor = Color(0xFF020617); // Slate 950 (Deepest dark)
-const Color darkThemeTextColor = Color(0xFFF8FAFC); // Slate 50
+const Color darkThemeBgColor = Color(0xFF000000); // Pure Black
+const Color darkThemeTextColor = Color(0xFFFFFFFF); // White
 const Color darkThemeSecondaryText = Color(0xFF94A3B8); // Slate 400
-const Color darkPrimaryContainer = Color(0xFF0F172A); // Slate 900
-const Color darkSecondaryContainer = Color(0xFF1E293B); // Slate 800
-const Color darkDividerColor = Color(0xFF1E293B); // Slate 800
+const Color darkPrimaryContainer = Color(0xFF0A0A0A); // Nearly black
+const Color darkSecondaryContainer = Color(0xFF161616); // Dark grey
+const Color darkDividerColor = Color(0xFF1F1F1F); // Dark grey divider
 
 //
 // Be careful when changing others below unless you have a specific need.
@@ -71,7 +70,7 @@ final List<BoxShadow> boxShadow = [
     blurRadius: 20,
     spreadRadius: 0,
     offset: const Offset(0, 4),
-    color: const Color(0xFF00E5FF).withOpacity(0.15), // Cyan glow
+    color: const Color(0xFFD4AF37).withOpacity(0.15), // Gold glow
   ),
 ];
 
@@ -102,39 +101,39 @@ const LinearGradient primaryGradient = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
   colors: [
-    Color(0xFF00E5FF), // Cyan brillante
-    Color(0xFF2979FF), // Blue electrico
+    Color(0xFFD4AF37), // Metallic Gold
+    Color(0xFFFDC830), // Bright Gold
   ],
 );
 
 const LinearGradient darkGradient = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
-  colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+  colors: [Color(0xFF000000), Color(0xFF111111)],
 );
 
 const LinearGradient modernPrimaryGradient = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
   colors: [
-    Color(0xFF00E5FF),
-    Color(0xFF00B8D4),
+    Color(0xFFD4AF37),
+    Color(0xFFB8860B),
   ],
 );
 
 const LinearGradient modernDarkGradient = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
-  colors: [Color(0xFF1E293B), Color(0xFF334155)],
+  colors: [Color(0xFF0A0A0A), Color(0xFF1C1C1C)],
 );
 
-// Gradiente negro premium para elementos especiales
+// Gradiente premium negro y dorado
 const LinearGradient premiumGradient = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
   colors: [
-    Color(0xFF0F172A),
-    Color(0xFF006064),
+    Color(0xFF000000), // Pure Black
+    Color(0xFF1C1C1C), // Deep charcoal
   ],
 );
 
