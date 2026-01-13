@@ -36,6 +36,13 @@ class MessageCleanupService {
   Future<void> _cleanupExpiredMessages() async {
     try {
       final currentUser = AuthController.instance.currentUser;
+      
+      // Verificar que el usuario esté autenticado y tenga userId válido
+      if (currentUser == null || currentUser.userId.isEmpty) {
+        debugPrint('⏭️ Limpieza de mensajes omitida: usuario no autenticado');
+        return;
+      }
+      
       final now = DateTime.now();
       
       debugPrint('🧹 Iniciando limpieza de mensajes expirados...');
@@ -87,6 +94,13 @@ class MessageCleanupService {
   Future<void> cleanupChatMessages(String chatUserId) async {
     try {
       final currentUser = AuthController.instance.currentUser;
+      
+      // Verificar que el usuario esté autenticado y tenga userId válido
+      if (currentUser == null || currentUser.userId.isEmpty || chatUserId.isEmpty) {
+        debugPrint('⏭️ Limpieza de mensajes omitida: usuario no autenticado o chatUserId inválido');
+        return;
+      }
+      
       final now = DateTime.now();
       
       final messagesRef = _firestore

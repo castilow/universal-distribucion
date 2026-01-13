@@ -27,6 +27,7 @@ import 'package:chat_messenger/components/klink_ai_button.dart';
 import 'package:chat_messenger/components/common_header.dart';
 import 'package:chat_messenger/config/theme_config.dart';
 import 'package:chat_messenger/tabs/products/add_product_screen.dart';
+import 'package:chat_messenger/controllers/product_controller.dart';
 import 'dart:ui' as ui;
 
 class HomeScreen extends StatefulWidget {
@@ -60,6 +61,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void initState() {
+    super.initState();
+    
     // Initialize animations
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -132,7 +135,14 @@ class _HomeScreenState extends State<HomeScreen>
     UserApi.updateUserPresenceInRealtimeDb();
 
     WidgetsBinding.instance.addObserver(this);
-    super.initState();
+    
+    // Forzar estilo de la barra de estado a negro después de que el widget esté construido
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final PreferencesController prefsController = Get.find<PreferencesController>();
+      SystemChrome.setSystemUIOverlayStyle(
+        getSystemOverlayStyle(prefsController.isDarkMode.value),
+      );
+    });
   }
 
   @override
@@ -277,14 +287,21 @@ class _HomeScreenState extends State<HomeScreen>
       // Get current user
       final User currentUer = AuthController.instance.currentUser;
 
-      return Scaffold(
-        extendBody: true,
-        extendBodyBehindAppBar: true,
-        appBar: (pageIndex == 4 || pageIndex == 2 || pageIndex == 0) 
+      return AnnotatedRegion<SystemUiOverlayStyle>(
+        value: getSystemOverlayStyle(isDarkMode),
+        child: Container(
+          // Fondo negro que cubre TODA la pantalla incluyendo la zona de la Dynamic Island
+          color: isDarkMode ? Colors.black : Theme.of(context).scaffoldBackgroundColor,
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            extendBody: true,
+            extendBodyBehindAppBar: true,
+          appBar: (pageIndex == 4 || pageIndex == 2 || pageIndex == 0) 
           ? null 
           : PreferredSize(
           preferredSize: const Size.fromHeight(80),
           child: SafeArea(
+            bottom: false,
             child: Container(
               height: 80,
               padding: const EdgeInsets.only(top: 8, left: 16, right: 16, bottom: 8),
@@ -320,41 +337,76 @@ class _HomeScreenState extends State<HomeScreen>
                   
                   // Search field or Title
                   Expanded(
-                    child: pageIndex == 0 
-                      ? Text(
-                          'Chats',
-                          style: TextStyle(
-                            color: isDarkMode ? Colors.white : Colors.black,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        )
-                      : GlobalSearchBar(
-                          key: _searchBarKey,
-                          showInHeader: true,
-                          onSearchActivated: () {
-                            setState(() {
-                              _isSearchActive = true;
-                            });
-                          },
-                          onSearchDeactivated: () {
-                            setState(() {
-                              _isSearchActive = false;
-                            });
-                          },
-                        ),
+                    child: GlobalSearchBar(
+                      key: _searchBarKey,
+                      showInHeader: true,
+                      onSearchActivated: () {
+                        setState(() {
+                          _isSearchActive = true;
+                        });
+                      },
+                      onSearchDeactivated: () {
+                        setState(() {
+                          _isSearchActive = false;
+                        });
+                      },
+                    ),
                   ),
                   
-                  // Plus button (oculto cuando búsqueda está activa)
+                  // Botones de la derecha (ocultos cuando búsqueda está activa)
                   if (!_isSearchActive) ...[
                     const SizedBox(width: 12),
                     
-
-                    
+                    // Messages button
+                    GestureDetector(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        // Navegar a la página de mensajes/chats
+                        homeController.pageIndex.value = 0;
+                      },
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isDarkMode ? darkPrimaryContainer.withOpacity(0.6) : primaryLight,
+                        ),
+                        child: const Icon(
+                          IconlyLight.message,
+                          color: primaryColor,
+                          size: 22,
+                        ),
+                      ),
+                    ),
                     const SizedBox(width: 12),
+                    
+                    // Settings button
+                    GestureDetector(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        print('Settings button tapped'); // Debug
+                        Get.toNamed(AppRoutes.settings);
+                      },
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isDarkMode ? darkPrimaryContainer.withOpacity(0.6) : primaryLight,
+                        ),
+                        child: const Icon(
+                          IconlyLight.setting,
+                          color: primaryColor,
+                          size: 22,
+                        ),
+                      ),
+                    ),
                     
                     // Calendar button (solo en página 2)
                     if (pageIndex == 2) ...[
+                      const SizedBox(width: 12),
                       GestureDetector(
                         onTap: () {
                           HapticFeedback.lightImpact();
@@ -389,155 +441,230 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ),
         ),
-        body: SafeArea(
-          top: pageIndex != 4,
-          child: Stack(
+        body: Container(
+          color: isDarkMode ? Colors.black : null,
+          child: Column(
             children: [
-              // Contenido principal o resultados de búsqueda
-              if (_isSearchActive) ...[
-                // Resultados de búsqueda
-                _searchBarKey.currentState?.buildSearchContent() ?? Container(),
-              ] else ...[
-                // Contenido normal de la aplicación
-                Column(
+              // Espacio para la barra de estado con fondo negro (solo si no es página 4)
+              if (pageIndex != 4) SizedBox(height: MediaQuery.of(context).padding.top),
+              Expanded(
+                child: Stack(
                   children: [
-                    // Show Banner Ad
-                    if (pageIndex != 0)
-                      BannerAdHelper.showBannerAd(margin: pageIndex == 1 ? 8 : 0),
+                    // Contenido principal o resultados de búsqueda
+                    if (_isSearchActive && _searchBarKey.currentState != null) ...[
+                      // Resultados de búsqueda - Usar ValueListenableBuilder para actualizar cuando cambie el texto
+                      ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: _searchBarKey.currentState!.textController,
+                        builder: (context, value, child) {
+                          return _searchBarKey.currentState!.buildSearchContent();
+                        },
+                      ),
+                    ] else ...[
+                      // Contenido normal de la aplicación
+                      Column(
+                        children: [
+                          // Show Banner Ad
+                          if (pageIndex != 0)
+                            BannerAdHelper.showBannerAd(margin: pageIndex == 1 ? 8 : 0),
 
-                    // Show the body content
-                    Expanded(child: homeController.pages[pageIndex]),
+                          // Show the body content
+                          Expanded(child: homeController.pages[pageIndex]),
+                        ],
+                      ),
+                    ],
+                    
+                    // Audio Recorder Overlay
+                    Obx(() {
+                      final messageController = MessageController.globalInstance;
+                      return messageController.showRecordingOverlay.value
+                          ? AudioRecorderOverlay(
+                              isRecording: messageController.isRecording.value,
+                              recordingDuration: messageController.recordingDurationValue.value,
+                              isPressed: messageController.isMicPressed.value,
+                              onCancel: () => messageController.onMicCancelled(),
+                              onSend: () => messageController.onMicTapped(),
+                            )
+                          : const SizedBox.shrink();
+                    }),
+                    
+                    // Audio Player Bar (top)
+                    Obx(() {
+                      final messageController = MessageController.globalInstance;
+                      
+                      return messageController.showAudioPlayerBar.value && messageController.currentPlayingMessage.value != null
+                          ? Positioned(
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              child: AudioPlayerBar(
+                                message: messageController.currentPlayingMessage.value!,
+                                isPlaying: messageController.isPlaying,
+                                playbackSpeed: messageController.playbackSpeed,
+                                onClose: () => messageController.stopAudio(),
+                                onPlayPause: () {
+                                  if (messageController.isPlaying) {
+                                    messageController.pauseAudio();
+                                  } else {
+                                    messageController.resumeAudio();
+                                  }
+                                },
+                                onSpeedChange: () => messageController.changePlaybackSpeed(),
+                              ),
+                            )
+                          : const SizedBox.shrink();
+                    }),
                   ],
                 ),
-              ],
-              
-              // Audio Recorder Overlay
-              Obx(() {
-                final messageController = MessageController.globalInstance;
-                return messageController.showRecordingOverlay.value
-                    ? AudioRecorderOverlay(
-                        isRecording: messageController.isRecording.value,
-                        recordingDuration: messageController.recordingDurationValue.value,
-                        isPressed: messageController.isMicPressed.value,
-                        onCancel: () => messageController.onMicCancelled(),
-                        onSend: () => messageController.onMicTapped(),
-                      )
-                    : const SizedBox.shrink();
-              }),
-              
-              // Audio Player Bar (top)
-              Obx(() {
-                final messageController = MessageController.globalInstance;
-                
-                return messageController.showAudioPlayerBar.value && messageController.currentPlayingMessage.value != null
-                    ? Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        child: AudioPlayerBar(
-                          message: messageController.currentPlayingMessage.value!,
-                          isPlaying: messageController.isPlaying,
-                          playbackSpeed: messageController.playbackSpeed,
-                          onClose: () => messageController.stopAudio(),
-                          onPlayPause: () {
-                            if (messageController.isPlaying) {
-                              messageController.pauseAudio();
-                            } else {
-                              messageController.resumeAudio();
-                            }
-                          },
-                          onSpeedChange: () => messageController.changePlaybackSpeed(),
-                        ),
-                      )
-                    : const SizedBox.shrink();
-              }),
+              ),
             ],
           ),
         ),
         bottomNavigationBar: _isSearchActive
             ? null
-            : Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 30),
-                child: Stack(
+            : ColoredBox(
+                color: Colors.transparent, // Let content show through or set explicitly if needed
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    top: 0,
+                    bottom: MediaQuery.of(context).padding.bottom > 0 
+                        ? MediaQuery.of(context).padding.bottom 
+                        : 30,
+                  ),
+                  child: Stack(
                   clipBehavior: Clip.none,
                   alignment: Alignment.bottomCenter,
                   children: [
                     // 1. GLASS BAR CONTAINER
                     ClipRRect(
                       borderRadius: BorderRadius.circular(30),
-                      child: BackdropFilter(
-                        filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                        child: Container(
-                          height: 70,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF141414).withOpacity(0.85),
-                            borderRadius: BorderRadius.circular(30),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.1),
-                              width: 0.5,
+                      child: isDarkMode 
+                        ? Container(
+                            height: 70,
+                            decoration: BoxDecoration(
+                               color: const Color(0xFF141414), // Darker grey for bar
+                              borderRadius: BorderRadius.circular(30),
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.4),
-                                blurRadius: 20,
-                                offset: const Offset(0, 10),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                _buildNavItem(
+                                  index: 0,
+                                  icon: pageIndex == 0 ? IconlyBold.home : IconlyLight.home,
+                                  label: 'Inicio',
+                                  isSelected: pageIndex == 0,
+                                  isDarkMode: isDarkMode,
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    homeController.pageIndex.value = 0;
+                                  },
+                                ),
+                                _buildNavItem(
+                                  index: 1,
+                                  icon: pageIndex == 1 ? IconlyBold.bag : IconlyLight.bag,
+                                  label: 'Pedidos',
+                                  isSelected: pageIndex == 1,
+                                  isDarkMode: isDarkMode,
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    homeController.pageIndex.value = 1;
+                                  },
+                                ),
+                                
+                                const SizedBox(width: 60), // Space for Orb
+                                
+                                _buildNavItem(
+                                  index: 3,
+                                  icon: pageIndex == 3 ? IconlyBold.category : IconlyLight.category,
+                                  label: 'Productos',
+                                  isSelected: pageIndex == 3,
+                                  isDarkMode: isDarkMode,
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    homeController.pageIndex.value = 3;
+                                  },
+                                ),
+                                _buildNavItem(
+                                  index: 4,
+                                  icon: pageIndex == 4 ? IconlyBold.location : IconlyLight.location,
+                                  label: 'Tiendas',
+                                  isSelected: pageIndex == 4,
+                                  isDarkMode: isDarkMode,
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    homeController.pageIndex.value = 4;
+                                  },
+                                ),
+                              ],
+                            ),
+                          )
+                        : BackdropFilter(
+                            filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                            child: Container(
+                              height: 70,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8F9FA).withOpacity(0.85), // Light background for glass
+                                borderRadius: BorderRadius.circular(30),
+                                border: Border.all(
+                                  color: Colors.black.withOpacity(0.05),
+                                  width: 0.5,
+                                ),
                               ),
-                            ],
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  _buildNavItem(
+                                    index: 0,
+                                    icon: pageIndex == 0 ? IconlyBold.home : IconlyLight.home,
+                                    label: 'Inicio',
+                                    isSelected: pageIndex == 0,
+                                    isDarkMode: isDarkMode,
+                                    onTap: () {
+                                      HapticFeedback.selectionClick();
+                                      homeController.pageIndex.value = 0;
+                                    },
+                                  ),
+                                  _buildNavItem(
+                                    index: 1,
+                                    icon: pageIndex == 1 ? IconlyBold.bag : IconlyLight.bag,
+                                    label: 'Pedidos',
+                                    isSelected: pageIndex == 1,
+                                    isDarkMode: isDarkMode,
+                                    onTap: () {
+                                      HapticFeedback.selectionClick();
+                                      homeController.pageIndex.value = 1;
+                                    },
+                                  ),
+                                  
+                                  const SizedBox(width: 60), // Space for Orb
+                                  
+                                  _buildNavItem(
+                                    index: 3,
+                                    icon: pageIndex == 3 ? IconlyBold.category : IconlyLight.category,
+                                    label: 'Productos',
+                                    isSelected: pageIndex == 3,
+                                    isDarkMode: isDarkMode,
+                                    onTap: () {
+                                      HapticFeedback.selectionClick();
+                                      homeController.pageIndex.value = 3;
+                                    },
+                                  ),
+                                  _buildNavItem(
+                                    index: 4,
+                                    icon: pageIndex == 4 ? IconlyBold.location : IconlyLight.location,
+                                    label: 'Tiendas',
+                                    isSelected: pageIndex == 4,
+                                    isDarkMode: isDarkMode,
+                                    onTap: () {
+                                      HapticFeedback.selectionClick();
+                                      homeController.pageIndex.value = 4;
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              _buildNavItem(
-                                index: 0,
-                                icon: pageIndex == 0 ? IconlyBold.home : IconlyLight.home,
-                                label: 'Inicio',
-                                isSelected: pageIndex == 0,
-                                isDarkMode: isDarkMode,
-                                onTap: () {
-                                  HapticFeedback.selectionClick();
-                                  homeController.pageIndex.value = 0;
-                                },
-                              ),
-                              _buildNavItem(
-                                index: 1,
-                                icon: pageIndex == 1 ? IconlyBold.bag : IconlyLight.bag,
-                                label: 'Pedidos',
-                                isSelected: pageIndex == 1,
-                                isDarkMode: isDarkMode,
-                                onTap: () {
-                                  HapticFeedback.selectionClick();
-                                  homeController.pageIndex.value = 1;
-                                },
-                              ),
-                              
-                              const SizedBox(width: 60), // Space for Orb
-                              
-                              _buildNavItem(
-                                index: 3,
-                                icon: pageIndex == 3 ? IconlyBold.category : IconlyLight.category,
-                                label: 'Productos',
-                                isSelected: pageIndex == 3,
-                                isDarkMode: isDarkMode,
-                                onTap: () {
-                                  HapticFeedback.selectionClick();
-                                  homeController.pageIndex.value = 3;
-                                },
-                              ),
-                              _buildNavItem(
-                                index: 4,
-                                icon: pageIndex == 4 ? IconlyBold.location : IconlyLight.location,
-                                label: 'Tiendas',
-                                isSelected: pageIndex == 4,
-                                isDarkMode: isDarkMode,
-                                onTap: () {
-                                  HapticFeedback.selectionClick();
-                                  homeController.pageIndex.value = 4;
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
                     ),
 
                     // 2. THE ORB (Center Button)
@@ -556,7 +683,7 @@ class _HomeScreenState extends State<HomeScreen>
                               height: 75,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: Colors.black,
+                                color: isDarkMode ? Colors.black : Colors.white,
                                 border: Border.all(
                                   color: const Color(0xFFD4AF37).withOpacity(0.8), // Gold Border
                                   width: 2,
@@ -570,7 +697,7 @@ class _HomeScreenState extends State<HomeScreen>
                                   ),
                                   // Outer shadow
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.5),
+                                    color: (isDarkMode ? Colors.black : Colors.grey).withOpacity(0.5),
                                     blurRadius: 10,
                                     offset: const Offset(0, 5),
                                   ),
@@ -607,8 +734,11 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                     ),
                   ],
+                  ),
                 ),
               ),
+          ),
+        ),
       );
     });
   }
@@ -624,7 +754,7 @@ class _HomeScreenState extends State<HomeScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              'Ingresa el PIN para agregar productos',
+              'Ingresa el PIN para ver el stock',
               style: TextStyle(color: Colors.white70),
             ),
             const SizedBox(height: 16),
@@ -656,7 +786,13 @@ class _HomeScreenState extends State<HomeScreen>
             onPressed: () {
               if (pinController.text == '1212') {
                 Get.back(); // Close dialog
-                Get.to(() => const AddProductScreen());
+                
+                // Activar modo admin y navegar a productos
+                final productController = Get.find<ProductController>();
+                final HomeController homeController = Get.find<HomeController>();
+                productController.isAdminMode.value = true;
+                homeController.pageIndex.value = 3;
+                
               } else {
                 Get.snackbar(
                   'Error',

@@ -5,7 +5,7 @@ import '../services/eth_service.dart';
 import '../services/network_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide User;
 
 class AirousWalletController extends GetxController {
   final wc = WCService();

@@ -28,17 +28,26 @@ class SignInController extends GetxController {
   }
 
   Future<void> signInWithEmailAndPassword() async {
+    // Evitar múltiples llamadas simultáneas
+    if (isLoading.value) {
+      debugPrint('🔐 Ya hay un intento de inicio de sesión en progreso...');
+      return;
+    }
+
     // Process valid data
     if (emailFormKey.currentState!.validate()) {
       // Update loading
       isLoading.value = true;
 
-      await AuthApi.signInWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
-      );
-
-      isLoading.value = false;
+      try {
+        await AuthApi.signInWithEmailAndPassword(
+          email: emailController.text.trim(),
+          password: passwordController.text.trim(),
+        );
+      } finally {
+        // Asegurar que isLoading se resetee siempre
+        isLoading.value = false;
+      }
     }
   }
 }

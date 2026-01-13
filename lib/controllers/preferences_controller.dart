@@ -83,30 +83,10 @@ class PreferencesController extends GetxController {
 
   @override
   void onInit() {
-    // Establecer un valor inicial inmediato basado en el tema del sistema
-    final Brightness systemBrightness =
-        SchedulerBinding.instance.platformDispatcher.platformBrightness;
-    final bool platformIsDark = systemBrightness == Brightness.dark;
-    isDarkMode.value = platformIsDark;
-    Get.changeThemeMode(platformIsDark ? ThemeMode.dark : ThemeMode.light);
-    _updateSystemOverlay();
-    
-    // Escuchar cambios en el tema del sistema en tiempo real
+    // Listen to device theme changes if in auto mode
     SchedulerBinding.instance.platformDispatcher.onPlatformBrightnessChanged = () {
-      final Brightness newBrightness =
-          SchedulerBinding.instance.platformDispatcher.platformBrightness;
-      final bool newIsDark = newBrightness == Brightness.dark;
-      
-      // Cambiar automáticamente al tema del sistema si no hay preferencia guardada
-      try {
-        final bool? savedPreference = _prefs.getBool(_themeModeKey);
-        if (savedPreference == null) {
-          // Modo automático activo - cambiar inmediatamente al tema del sistema
-          _changeThemeWithoutSaving(newIsDark);
-        }
-      } catch (e) {
-        // Si hay error, asumir modo automático y cambiar al tema del sistema
-        _changeThemeWithoutSaving(newIsDark);
+      if (isFollowingSystemTheme) {
+        _changeThemeWithoutSaving(_isDeviceDarkMode);
       }
     };
     
@@ -116,7 +96,7 @@ class PreferencesController extends GetxController {
       Get.updateLocale(value);
     });
 
-    // Listen to theme change
+    // Listen to theme changes
     ever(isDarkMode, (bool value) {
       _changeTheme(value);
     });
@@ -187,25 +167,25 @@ class PreferencesController extends GetxController {
   // Load theme mode from SharedPreferences
   void _loadThemeMode() {
     try {
-      // Por defecto, siempre usar el tema del sistema (modo automático)
-      // Solo usar preferencia guardada si el usuario la estableció explícitamente
-      final bool? savedIsDark = _prefs.getBool(_themeModeKey);
+      final bool? savedThemeMode = _prefs.getBool(_themeModeKey);
       
-      if (savedIsDark == null) {
-        // Modo automático por defecto - usar el tema del sistema
-        isDarkMode.value = _isDeviceDarkMode;
+      // Si hay preferencia guardada, usarla
+      if (savedThemeMode != null) {
+        isDarkMode.value = savedThemeMode;
+        Get.changeThemeMode(savedThemeMode ? ThemeMode.dark : ThemeMode.light);
       } else {
-        // Usuario estableció preferencia manual - usar su elección
-        isDarkMode.value = savedIsDark;
+        // Si no hay preferencia, usar sistema
+        isDarkMode.value = _isDeviceDarkMode;
+        Get.changeThemeMode(_isDeviceDarkMode ? ThemeMode.dark : ThemeMode.light);
       }
       
-      Get.changeThemeMode(isDarkMode.value ? ThemeMode.dark : ThemeMode.light);
       _updateSystemOverlay();
       _updateIconTheme();
     } catch (e) {
-      // Si hay error, usar el tema del sistema (modo automático)
+      print('Error loading theme mode: $e');
+      // Fallback a sistema
       isDarkMode.value = _isDeviceDarkMode;
-      Get.changeThemeMode(isDarkMode.value ? ThemeMode.dark : ThemeMode.light);
+      Get.changeThemeMode(_isDeviceDarkMode ? ThemeMode.dark : ThemeMode.light);
       _updateSystemOverlay();
       _updateIconTheme();
     }

@@ -4,7 +4,7 @@ abstract class AppConfig {
   ///
 
   /// App Name
-  static const String appName = "Klink";
+  static const String appName = "Universal";
 
   /// Email for Support
   static const String appEmail = "info@klink.com";

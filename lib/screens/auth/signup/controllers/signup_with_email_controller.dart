@@ -31,16 +31,38 @@ class SignUpWithEmailController extends GetxController {
   }
 
   Future<void> signUpWithEmailAndPassword() async {
-    // Check the form
-    if (!formKey.currentState!.validate()) return;
+    // Evitar múltiples llamadas simultáneas
+    if (isLoading.value) {
+      debugPrint('📝 Ya hay un intento de registro en progreso...');
+      return;
+    }
 
+    debugPrint('📝 ===== SIGNUP WITH EMAIL =====');
+    debugPrint('📝 Email: ${emailController.text.trim()}');
+    
+    // Check the form
+    if (!formKey.currentState!.validate()) {
+      debugPrint('📝 ❌ Validación del formulario falló');
+      return;
+    }
+
+    debugPrint('📝 ✅ Validación del formulario exitosa');
     isLoading.value = true;
 
-    await AuthApi.signUpWithEmailAndPassword(
-      email: emailController.text.trim(),
-      password: passwordController.text.trim(),
-    );
-
-    isLoading.value = false;
+    try {
+      debugPrint('📝 Llamando a AuthApi.signUpWithEmailAndPassword()...');
+      await AuthApi.signUpWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+      debugPrint('📝 ✅ AuthApi.signUpWithEmailAndPassword() completado');
+    } catch (e, stackTrace) {
+      debugPrint('📝 ❌ Error en signUpWithEmailAndPassword: $e');
+      debugPrint('📝 Stack trace: $stackTrace');
+    } finally {
+      // Asegurar que isLoading se resetee siempre
+      isLoading.value = false;
+      debugPrint('📝 ===== FIN SIGNUP WITH EMAIL =====');
+    }
   }
 }

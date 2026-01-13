@@ -1,11 +1,11 @@
 {
-      "name": "Klink",
-  "short_name": "Klink",
+      "name": "Universal",
+  "short_name": "Universal",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "Klink - Connect and chat securely with friends and family.",
+    "description": "Universal - Connect and chat securely with friends and family.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

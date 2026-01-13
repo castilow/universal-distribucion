@@ -85,9 +85,15 @@ class CategoryProductsScreen extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                child: product['image'].toString().startsWith('http')
-                  ? CachedNetworkImage(
-                      imageUrl: product['image'],
+                child: () {
+                  final imagePath = product['image'];
+                  if (imagePath == null || imagePath.toString().isEmpty) {
+                     return _buildErrorWidget(product);
+                  }
+                  
+                  if (imagePath.toString().startsWith('http')) {
+                    return CachedNetworkImage(
+                      imageUrl: imagePath,
                       fit: BoxFit.cover,
                       placeholder: (context, url) => Container(
                         color: const Color(0xFF1C1C1E),
@@ -99,16 +105,19 @@ class CategoryProductsScreen extends StatelessWidget {
                         ),
                       ),
                       errorWidget: (context, url, error) => _buildErrorWidget(product),
-                    )
-                  : Image.file(
-                      File(product['image']),
+                    );
+                  } else {
+                    return Image.file(
+                      File(imagePath),
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) => Image.asset(
-                        product['image'], // Try asset if file fails (for reused 3D assets)
+                        imagePath, // Try asset if file fails (for reused 3D assets)
                         fit: BoxFit.contain,
                         errorBuilder: (context, error, stackTrace) => _buildErrorWidget(product),
                       ),
-                    ),
+                    );
+                  }
+                }(),
               ),
             ),
           ),

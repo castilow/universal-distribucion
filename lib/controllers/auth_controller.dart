@@ -7,6 +7,7 @@ import 'package:chat_messenger/models/user.dart';
 import 'package:chat_messenger/routes/app_routes.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:chat_messenger/services/zego_call_service.dart';
+import 'package:chat_messenger/api/auth_api.dart';
 
 import 'app_controller.dart';
 
@@ -21,6 +22,35 @@ class AuthController extends GetxController {
 
   // Hold login provider
   LoginProvider provider = LoginProvider.email;
+
+  // Timestamp del último envío de email de verificación
+  DateTime? _lastVerificationEmailSent;
+  
+  // Getter para acceder al timestamp
+  DateTime? get lastVerificationEmailSent => _lastVerificationEmailSent;
+  
+  // Tiempo mínimo entre envíos de email (5 minutos)
+  static const Duration _minTimeBetweenEmails = Duration(minutes: 5);
+  
+  // Verificar si se puede enviar un email de verificación
+  bool get canSendVerificationEmail {
+    return _lastVerificationEmailSent == null || 
+        DateTime.now().difference(_lastVerificationEmailSent!) >= _minTimeBetweenEmails;
+  }
+
+  // Enviar email de verificación con control de rate limiting
+  Future<void> sendVerificationEmail() async {
+    if (!canSendVerificationEmail) {
+      throw Exception('too-many-requests');
+    }
+    
+    if (firebaseUser == null) {
+      throw Exception('user-not-found');
+    }
+    
+    await firebaseUser!.sendEmailVerification();
+    _lastVerificationEmailSent = DateTime.now();
+  }
 
   // Current User Model
   final Rxn<User> _currentUser = Rxn();
@@ -114,14 +144,40 @@ class AuthController extends GetxController {
     if (!firebaseUser!.emailVerified) {
       debugPrint('👤 Email no verificado, recargando usuario...');
       // Reload user to get latest verification status
-      await firebaseUser!.reload();
+      try {
+        await firebaseUser!.reload();
+      } catch (e) {
+        debugPrint('👤 ❌ Error al recargar usuario: $e');
+      }
       
       // Check again after reload
       if (!firebaseUser!.emailVerified) {
-        debugPrint('👤 Email aún no verificado, enviando verificación y redirigiendo a verifyEmail');
-        // Send email verification
-        await firebaseUser!.sendEmailVerification();
-        // Go to verify email screen
+        debugPrint('👤 Email aún no verificado, redirigiendo a verifyEmail');
+        
+        // Solo enviar email si han pasado al menos 5 minutos desde el último envío
+        final canSendEmail = _lastVerificationEmailSent == null || 
+            DateTime.now().difference(_lastVerificationEmailSent!) >= _minTimeBetweenEmails;
+        
+        if (canSendEmail) {
+          try {
+            debugPrint('👤 Enviando email de verificación...');
+            await sendVerificationEmail();
+            debugPrint('👤 ✅ Email de verificación enviado');
+          } catch (e) {
+            debugPrint('👤 ❌ Error enviando email de verificación: $e');
+            // No bloquear el flujo si hay error, solo mostrar mensaje
+            final errorMessage = AuthApi.getReadableAuthError(e);
+            if (e.toString().contains('too-many-requests') || 
+                (e is auth.FirebaseAuthException && e.code == 'too-many-requests')) {
+              // Ya se envió un email recientemente, solo redirigir
+              debugPrint('👤 ⚠️ Demasiadas solicitudes, esperando antes de enviar otro email');
+            }
+          }
+        } else {
+          debugPrint('👤 ⏳ Esperando antes de enviar otro email de verificación');
+        }
+        
+        // Go to verify email screen (siempre, independientemente de si se envió el email)
         Future(() => Get.offAllNamed(AppRoutes.verifyEmail));
         return;
       }

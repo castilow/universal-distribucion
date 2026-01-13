@@ -11,13 +11,13 @@ const openaiApiKey = defineSecret('OPENAI_API_KEY');
 
 // Inicializar con configuración mínima
 admin.initializeApp({
-  projectId: 'klink-b0358',
-  storageBucket: 'klink-b0358.appspot.com',
+  projectId: 'universal-distribucion',
+  storageBucket: 'universal-distribucion.appspot.com',
 });
 
 // Inicializar Google Cloud Translation v3
 const translationClient = new TranslationServiceClient();
-const PROJECT_ID = admin.app().options.projectId || process.env.GCLOUD_PROJECT || 'klink-b0358';
+const PROJECT_ID = admin.app().options.projectId || process.env.GCLOUD_PROJECT || 'universal-distribucion';
 const LOCATION = 'us-central1';
 
 // Función para desencriptar mensajes usando el mismo algoritmo que Flutter

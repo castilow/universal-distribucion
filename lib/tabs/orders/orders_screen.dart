@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:flutter_iconly/flutter_iconly.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chat_messenger/controllers/order_controller.dart';
+import 'package:chat_messenger/theme/app_theme.dart';
 
 class OrdersScreen extends StatelessWidget {
   const OrdersScreen({Key? key}) : super(key: key);
@@ -11,22 +12,24 @@ class OrdersScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final OrderController orderController = Get.find();
     const goldColor = Color(0xFFD4AF37);
+    final isDarkMode = AppTheme.of(context).isDarkMode;
+
 
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Column(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Column(
           children: [
+            const SizedBox(height: 85), // Clear floating AppBar (80 + 5 buffer)
             // Header
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Pedidos',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
                       fontSize: 34,
                       fontWeight: FontWeight.bold,
                       letterSpacing: -1,
@@ -35,13 +38,13 @@ class OrdersScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1C1C1E),
+                      color: isDarkMode ? const Color(0xFF1C1C1E) : Colors.grey[200],
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Obx(() => Text(
                       '${orderController.cart.length} Items',
-                      style: const TextStyle(
-                        color: Colors.white54,
+                      style: TextStyle(
+                        color: isDarkMode ? Colors.white54 : Colors.black54,
                         fontWeight: FontWeight.bold,
                       ),
                     )),
@@ -58,12 +61,12 @@ class OrdersScreen extends StatelessWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(IconlyBroken.buy, color: Colors.white.withOpacity(0.2), size: 80),
+                        Icon(IconlyBroken.buy, color: (isDarkMode ? Colors.white : Colors.black).withOpacity(0.2), size: 80),
                         const SizedBox(height: 16),
                         Text(
                           'Tu cesta está vacía',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.5),
+                            color: (isDarkMode ? Colors.white : Colors.black).withOpacity(0.5),
                             fontSize: 18,
                             fontWeight: FontWeight.w500,
                           ),
@@ -98,9 +101,16 @@ class OrdersScreen extends StatelessWidget {
                         margin: const EdgeInsets.only(bottom: 16),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1C1C1E),
+                          color: isDarkMode ? const Color(0xFF1C1C1E) : Colors.white,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white.withOpacity(0.05)),
+                          border: Border.all(color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05)),
+                          boxShadow: isDarkMode ? [] : [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
                         ),
                         child: Row(
                           children: [
@@ -129,8 +139,8 @@ class OrdersScreen extends StatelessWidget {
                                 children: [
                                   Text(
                                     item['name'],
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: isDarkMode ? Colors.white : Colors.black,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
                                     ),
@@ -141,7 +151,7 @@ class OrdersScreen extends StatelessWidget {
                                   Text(
                                     'Cantidad: 1', // Simplificado
                                     style: TextStyle(
-                                      color: Colors.white.withOpacity(0.5),
+                                      color: (isDarkMode ? Colors.white : Colors.black).withOpacity(0.5),
                                       fontSize: 14,
                                     ),
                                   ),
@@ -190,17 +200,17 @@ class OrdersScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Total',
                             style: TextStyle(
-                              color: Colors.white54,
+                              color: isDarkMode ? Colors.white54 : Colors.black54,
                               fontSize: 16,
                             ),
                           ),
                           Text(
                             '€${orderController.total.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: isDarkMode ? Colors.white : Colors.black,
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                             ),
@@ -236,7 +246,6 @@ class OrdersScreen extends StatelessWidget {
             }),
           ],
         ),
-      ),
     );
   }
 }

@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide User;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:chat_messenger/config/theme_config.dart';
@@ -50,7 +50,11 @@ abstract class AppHelper {
       }
 
       debugPrint('🔑 Usuario autenticado: ${firebaseUser.uid}');
+      debugPrint('🔑 UserId recibido: $userId');
+      debugPrint('🔑 Coinciden: ${firebaseUser.uid == userId}');
       debugPrint('📁 Subiendo archivo: ${file.path}');
+      debugPrint('📁 Archivo existe: ${await file.exists()}');
+      debugPrint('📁 Tamaño del archivo: ${await file.length()} bytes');
 
       // File name with timestamp to avoid conflicts
       final String fileName =
@@ -58,12 +62,34 @@ abstract class AppHelper {
       final String filePath = 'uploads/$userId/$fileName';
 
       debugPrint('📂 Ruta de destino: $filePath');
+      debugPrint('📂 Ruta completa: uploads/$userId/$fileName');
+
+      // Verificar que el archivo existe y es válido
+      if (!await file.exists()) {
+        throw Exception('El archivo no existe: ${file.path}');
+      }
+
+      final fileSize = await file.length();
+      if (fileSize == 0) {
+        throw Exception('El archivo está vacío');
+      }
+
+      debugPrint('📤 Iniciando subida de archivo (${fileSize} bytes)...');
 
       // Upload file
       final UploadTask uploadTask = FirebaseStorage.instance
           .ref()
           .child(filePath)
-          .putFile(file);
+          .putFile(
+            file,
+            SettableMetadata(
+              contentType: 'image/jpeg', // Asegurar tipo de contenido
+              customMetadata: {
+                'uploadedBy': firebaseUser.uid,
+                'uploadedAt': DateTime.now().toIso8601String(),
+              },
+            ),
+          );
 
       // Monitor progress
       uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {

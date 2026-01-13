@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart' hide Path;
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_iconly/flutter_iconly.dart';
 import 'dart:ui'; // For ImageFilter
+import 'package:chat_messenger/theme/app_theme.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -106,8 +107,10 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = AppTheme.of(context).isDarkMode;
+
     return Scaffold(
-      backgroundColor: Colors.black, // Dark Base
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // Dark Base or Light Base
       floatingActionButton: FloatingActionButton(
         onPressed: () {
              if (_currentLocation != null) _animatedMapMove(_currentLocation!, 15);
@@ -136,11 +139,13 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             ),
             children: [
               TileLayer(
-                // CartoDB Dark Matter - High res
-                urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+                // CartoDB Dark Matter - High res for dark mode, Positron for light mode
+                urlTemplate: isDarkMode 
+                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
                 subdomains: const ['a', 'b', 'c', 'd'],
                 userAgentPackageName: 'com.universal.distribucion',
-                backgroundColor: Colors.black, 
+                backgroundColor: isDarkMode ? Colors.black : Colors.white, 
               ),
               MarkerLayer(
                 markers: [
@@ -187,10 +192,12 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                         height: 50,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF141414).withOpacity(0.8), // Dark Glass
+                          color: isDarkMode 
+                              ? const Color(0xFF141414).withOpacity(0.8) // Dark Glass
+                              : const Color(0xFFF8F9FA).withOpacity(0.85), // Light Glass
                           borderRadius: BorderRadius.circular(25),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.1),
+                            color: isDarkMode ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05),
                             width: 0.5,
                           ),
                           boxShadow: [
@@ -206,10 +213,10 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                             const Icon(IconlyLight.search, color: Color(0xFFD4AF37)), // Gold Icon
                             const SizedBox(width: 12),
                             Expanded(
-                              child: Text(
+                                child: Text(
                                 'Find a store nearby...',
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.7),
+                                  color: isDarkMode ? Colors.white.withOpacity(0.7) : Colors.black54,
                                   fontSize: 15,
                                 ),
                               ),
@@ -218,9 +225,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                               padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: Colors.white.withOpacity(0.1),
+                                color: isDarkMode ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05),
                               ),
-                              child: const Icon(IconlyBold.voice, color: Colors.white, size: 18),
+                              child: Icon(IconlyBold.voice, color: isDarkMode ? Colors.white : Colors.black54, size: 18),
                             ),
                             const SizedBox(width: 8),
                             const CircleAvatar(
@@ -238,11 +245,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: [
-                        _buildGlassChip(label: 'All Stores', icon: IconlyBold.category, isSelected: true),
+                        _buildGlassChip(label: 'All Stores', icon: IconlyBold.category, isSelected: true, isDarkMode: isDarkMode),
                         const SizedBox(width: 10),
-                        _buildGlassChip(label: 'Open Now', icon: IconlyBold.timeCircle),
+                        _buildGlassChip(label: 'Open Now', icon: IconlyBold.timeCircle, isDarkMode: isDarkMode),
                         const SizedBox(width: 10),
-                        _buildGlassChip(label: 'Favorites', icon: IconlyBold.heart),
+                        _buildGlassChip(label: 'Favorites', icon: IconlyBold.heart, isDarkMode: isDarkMode),
                       ],
                     ),
                   ),
@@ -257,7 +264,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               left: 16,
               right: 16,
               bottom: 110, // Above floating nav bar
-              child: _buildLocationCard(),
+              child: _buildLocationCard(isDarkMode),
             ),
         ],
       ),
@@ -302,7 +309,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildGlassChip({required String label, required IconData icon, bool isSelected = false}) {
+  Widget _buildGlassChip({required String label, required IconData icon, bool isSelected = false, required bool isDarkMode}) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
@@ -312,10 +319,10 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           decoration: BoxDecoration(
             color: isSelected 
                 ? const Color(0xFFD4AF37).withOpacity(0.9) // Gold
-                : const Color(0xFF141414).withOpacity(0.6), // Dark Glass
+                : (isDarkMode ? const Color(0xFF141414).withOpacity(0.6) : Colors.white.withOpacity(0.8)), // Dark Glass or White Glass
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isSelected ? const Color(0xFFD4AF37) : Colors.white.withOpacity(0.1),
+              color: isSelected ? const Color(0xFFD4AF37) : (isDarkMode ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05)),
               width: 1,
             ),
           ),
@@ -324,13 +331,13 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               Icon(
                 icon, 
                 size: 16, 
-                color: isSelected ? Colors.black : Colors.white70
+                color: isSelected ? Colors.black : (isDarkMode ? Colors.white70 : Colors.black87)
               ),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? Colors.black : Colors.white,
+                  color: isSelected ? Colors.black : (isDarkMode ? Colors.white : Colors.black),
                   fontWeight: FontWeight.w600,
                   fontSize: 13,
                 ),
@@ -342,7 +349,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildLocationCard() {
+  Widget _buildLocationCard(bool isDarkMode) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
@@ -350,10 +357,10 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFF141414).withOpacity(0.9),
+            color: isDarkMode ? const Color(0xFF141414).withOpacity(0.9) : Colors.white.withOpacity(0.95),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: Colors.white.withOpacity(0.1),
+              color: isDarkMode ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05),
               width: 0.5,
             ),
             boxShadow: [
@@ -385,10 +392,10 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
+                    Text(
                       'Universal Store Madrid',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: isDarkMode ? Colors.white : Colors.black,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
@@ -406,7 +413,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                     Text(
                       'Calle Gran Vía, 24',
                       style: TextStyle(
-                        color: Colors.white54,
+                        color: isDarkMode ? Colors.white54 : Colors.black54,
                         fontSize: 12,
                       ),
                     ),

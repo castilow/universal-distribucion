@@ -119,7 +119,7 @@ class AppTheme {
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         elevation: 0,
-        backgroundColor: darkPrimaryContainer.withOpacity(0.9),
+        backgroundColor: Colors.black, // Negro puro
         selectedItemColor: primaryColor,
         unselectedItemColor: darkThemeSecondaryText,
         unselectedIconTheme: const IconThemeData(size: 26),

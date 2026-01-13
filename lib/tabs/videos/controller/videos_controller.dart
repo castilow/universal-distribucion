@@ -246,10 +246,10 @@ class VideosController extends GetxController {
     isLoadingContacts.value = true;
     try {
       // Fetch contacts from UserApi
-      final users = await UserApi.getAllUsers();
+      final List<User> users = await UserApi.getAllUsers();
       // Filter out current user
       final currentUserId = AuthController.instance.currentUser.userId;
-      contacts.value = users.where((u) => u.userId != currentUserId).toList();
+      contacts.value = users.where((User u) => u.userId != currentUserId).toList();
     } catch (e) {
       print('Error fetching contacts: $e');
     } finally {

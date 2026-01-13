@@ -8,7 +8,7 @@ import 'package:chat_messenger/controllers/auth_controller.dart';
 import 'package:chat_messenger/helpers/dialog_helper.dart';
 import 'package:chat_messenger/routes/app_routes.dart';
 import 'package:chat_messenger/config/theme_config.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide User;
 
 class SignUpController extends GetxController {
   final _auth = FirebaseAuth.instance;
@@ -83,13 +83,30 @@ class SignUpController extends GetxController {
     );
 
     try {
+      // Verificar que el usuario esté autenticado
+      final firebaseUser = AuthController.instance.firebaseUser;
+      debugPrint('📝 signUp() -> firebaseUser: ${firebaseUser?.uid}');
+      debugPrint('📝 signUp() -> email: ${firebaseUser?.email}');
+      
+      if (firebaseUser == null) {
+        DialogHelper.closeDialog();
+        DialogHelper.showSnackbarMessage(
+          SnackMsgType.error,
+          'Debes estar autenticado para crear una cuenta',
+        );
+        return;
+      }
+      
       // Create user account
+      debugPrint('📝 signUp() -> Creando cuenta con nombre: ${nameController.text.trim()}');
       final result = await UserApi.createAccount(
         photoFile: photoFile.value,
         fullname: nameController.text.trim(),
         username: usernameController.text.trim(),
       );
 
+      debugPrint('📝 signUp() -> Resultado: $result (tipo: ${result.runtimeType})');
+      
       // Check result
       if (result is bool && result) {
         // Get current user

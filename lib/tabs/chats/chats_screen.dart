@@ -64,7 +64,10 @@ class _ChatsScreenState extends State<ChatsScreen> {
     // Other vars
     const padding = EdgeInsets.symmetric(vertical: defaultPadding);
 
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
+      backgroundColor: isDarkMode ? Colors.black : null,
       body: Obx(
         () {
           // Check loading
@@ -94,7 +97,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 // Stories Section (Pull to reveal)
                 // Only visible when not searching (or searching but scrolled up)
                 SliverAppBar(
-                  backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                  backgroundColor: isDarkMode ? Colors.black : Theme.of(context).scaffoldBackgroundColor,
                   elevation: 0,
                   expandedHeight: 160.0,
                   toolbarHeight: 0,

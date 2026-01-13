@@ -2,6 +2,7 @@ import 'package:chat_messenger/config/app_config.dart';
 import 'package:chat_messenger/routes/app_pages.dart';
 import 'package:chat_messenger/routes/app_routes.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -13,6 +14,7 @@ import 'firebase_options.dart';
 import 'controllers/preferences_controller.dart';
 import 'i18n/app_languages.dart';
 import 'theme/app_theme.dart';
+import 'config/theme_config.dart';
 import 'widgets/wallet_service_initializer.dart';
 import 'services/zego_call_service.dart';
 import 'services/ai_assistant_initializer.dart';
@@ -66,12 +68,19 @@ Future<void> main() async {
     print('\n');
     print('╔═══════════════════════════════════════════════════════════════╗');
     print('║                                                               ║');
-    print('║     ██╗  ██╗██╗     ██╗███╗   ██╗██╗  ██╗                     ║');
-    print('║     ██║ ██╔╝██║     ██║████╗  ██║██║ ██╔╝                     ║');
-    print('║     █████╔╝ ██║     ██║██╔██╗ ██║█████╔╝                      ║');
-    print('║     ██╔═██╗ ██║     ██║██║╚██╗██║██╔═██╗                      ║');
-    print('║     ██║  ██╗███████╗██║██║ ╚████║██║  ██╗                     ║');
-    print('║     ╚═╝  ╚═╝╚══════╝╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝                     ║');
+    print('║            ██╗   ██╗███╗   ██╗██╗██╗   ██╗███████╗            ║');
+    print('║            ██║   ██║████╗  ██║██║██║   ██║██╔════╝            ║');
+    print('║            ██║   ██║██╔██╗ ██║██║██║   ██║█████╗              ║');
+    print('║            ██║   ██║██║╚██╗██║██║╚██╗ ██╔╝██╔══╝              ║');
+    print('║            ╚██████╔╝██║ ╚████║██║ ╚████╔╝ ███████╗            ║');
+    print('║             ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═══╝  ╚══════╝            ║');
+    print('║                                                               ║');
+    print('║            ███████╗██╗   ██╗███╗   ██╗██╗███████╗            ║');
+    print('║            ██╔════╝██║   ██║████╗  ██║██║██╔════╝            ║');
+    print('║            ███████╗██║   ██║██╔██╗ ██║██║███████╗            ║');
+    print('║            ╚════██║██║   ██║██║╚██╗██║██║╚════██║            ║');
+    print('║            ███████║╚██████╔╝██║ ╚████║██║███████║            ║');
+    print('║            ╚══════╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝╚══════╝            ║');
     print('║                                                               ║');
     print('║                    🚀 Iniciando aplicación...                 ║');
     print('║                                                               ║');
@@ -114,32 +123,45 @@ class MyApp extends GetView<PreferencesController> {
   @override
   Widget build(BuildContext context) {
     return WalletServiceInitializer(
-      child: Obx(() => GetMaterialApp(
-        title: AppConfig.appName,
-        debugShowCheckedModeBanner: false,
-        navigatorKey: navigatorKey, // Navigator key para ZEGOCLOUD
-        builder: (BuildContext context, Widget? child) {
-          return Stack(
-            children: [
-              child!,
-              ZegoUIKitPrebuiltCallMiniOverlayPage(
-                contextQuery: () => navigatorKey.currentContext ?? context,
-              ),
-            ],
-          );
-        },
-        theme: AppTheme.of(context).lightTheme,
-        darkTheme: AppTheme.of(context).darkTheme,
-        themeMode: controller.isDarkMode.value ? ThemeMode.dark : ThemeMode.light,
-        translations: AppLanguages(),
-        locale: controller.locale.value,
-        fallbackLocale: const Locale('en'),
-        // Transiciones suaves estilo iOS por defecto
-        defaultTransition: Transition.cupertino,
-        transitionDuration: const Duration(milliseconds: 300),
-        initialRoute: AppRoutes.splash,
-        getPages: AppPages.pages,
-      )),
+      child: Obx(() {
+        // Forzar estilo del sistema para barras negras
+        final systemStyle = getSystemOverlayStyle(controller.isDarkMode.value);
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: systemStyle,
+          child: Material(
+            color: Colors.transparent, // Dejar que el Scaffold maneje el color
+            child: GetMaterialApp(
+              title: AppConfig.appName,
+              debugShowCheckedModeBanner: false,
+              navigatorKey: navigatorKey, // Navigator key para ZEGOCLOUD
+              builder: (BuildContext context, Widget? child) {
+                return Container(
+                  color: Theme.of(context).scaffoldBackgroundColor, // Adaptable al tema
+                  child: Stack(
+                    children: [
+                      child!,
+                      ZegoUIKitPrebuiltCallMiniOverlayPage(
+                        contextQuery: () => navigatorKey.currentContext ?? context,
+                      ),
+                    ],
+                  ),
+                );
+              },
+            theme: AppTheme.of(context).lightTheme,
+            darkTheme: AppTheme.of(context).darkTheme,
+            themeMode: controller.isDarkMode.value ? ThemeMode.dark : ThemeMode.light,
+            translations: AppLanguages(),
+            locale: controller.locale.value,
+            fallbackLocale: const Locale('en'),
+            // Transiciones suaves estilo iOS por defecto
+            defaultTransition: Transition.cupertino,
+            transitionDuration: const Duration(milliseconds: 300),
+            initialRoute: AppRoutes.splash,
+            getPages: AppPages.pages,
+            ),
+          ),
+        );
+      }),
     );
   }
 }

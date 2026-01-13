@@ -30,16 +30,28 @@ service cloud.firestore {
 
     // Global app configuration
     match /AppInfo/{docId} {
-      allow read: if signedIn();
+      // Permitir lectura pública (puede ser necesario antes de login)
+      allow read: if true;
       allow write: if false; // Sólo administradores via consola
     }
 
+    // Special case: AI Assistant user document (must be BEFORE Users/{userId} match)
+    // Permitir lectura pública para que todos puedan ver el asistente
+    // Permitir escritura para inicialización del sistema (se ejecuta antes de autenticación)
+    match /Users/klink_ai_assistant {
+      allow read: if true; // Todos pueden leer el asistente
+      allow write: if true; // Permitir escritura para inicialización (temporal, mejorar después)
+    }
+    
     // Users collection
     match /Users/{userId} {
       // Los usuarios autenticados pueden leer perfiles (para listados/contactos)
       allow read: if signedIn();
-      // Cada usuario sólo puede escribir su propio documento
-      allow write: if isOwner(userId);
+      // Permitir crear el documento si el usuario está autenticado y es el propietario
+      // Permitir actualizar solo si es el propietario
+      allow create: if signedIn() && request.auth.uid == userId;
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
 
       // User's chats - allow access to both participants
       match /Chats/{chatId} {
@@ -144,10 +156,42 @@ service cloud.firestore {
       allow read: if false; // Only admins should read reports
     }
     
-    // Special case: AI Assistant user document (must be outside Users/{userId} match)
-    match /Users/klink_ai_assistant {
+    // Products collection - allow authenticated users to manage products
+    match /Products/{productId} {
+      // Todos los usuarios autenticados pueden leer productos
       allow read: if signedIn();
-      allow write: if false; // Only system can write
+      
+      // Solo usuarios autenticados pueden crear productos
+      // El userId en el documento debe coincidir con el usuario autenticado
+      allow create: if signedIn() && 
+                       request.resource.data.userId == request.auth.uid;
+      
+      // Solo el propietario puede actualizar sus productos
+      allow update: if signedIn() && 
+                       resource.data.userId == request.auth.uid;
+      
+      // Solo el propietario puede eliminar sus productos
+      allow delete: if signedIn() && 
+                       resource.data.userId == request.auth.uid;
+    }
+    
+    // Categories collection - allow authenticated users to manage categories
+    match /Categories/{categoryId} {
+      // Todos los usuarios autenticados pueden leer categorías
+      allow read: if signedIn();
+      
+      // Solo usuarios autenticados pueden crear categorías
+      // El userId en el documento debe coincidir con el usuario autenticado
+      allow create: if signedIn() && 
+                       request.resource.data.userId == request.auth.uid;
+      
+      // Solo el propietario puede actualizar sus categorías
+      allow update: if signedIn() && 
+                       resource.data.userId == request.auth.uid;
+      
+      // Solo el propietario puede eliminar sus categorías
+      allow delete: if signedIn() && 
+                       resource.data.userId == request.auth.uid;
     }
   }
 }

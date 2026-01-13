@@ -41,19 +41,19 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBkK7tDuZU56DIc7mlo7Dv-451Idf51608',
-    appId: '1:1066544431393:android:82bb6bc259c5aadec97e60',
-    messagingSenderId: '1066544431393',
-    projectId: 'klink-b0358',
-    storageBucket: 'klink-b0358.firebasestorage.app',
+    apiKey: 'AIzaSyAlB-7C0QvdRpXjLE3wl92kOPWcfFV_lTw',
+    appId: '1:70473962578:android:ecb31f53978d981d26bb8b',
+    messagingSenderId: '70473962578',
+    projectId: 'universal-distribucion',
+    storageBucket: 'universal-distribucion.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBMDPKKPijW81wPAga8sXolBfVwLsc9W-0',
-    appId: '1:1066544431393:ios:e23758cc583ec8c3c97e60',
-    messagingSenderId: '1066544431393',
-    projectId: 'klink-b0358',
-    storageBucket: 'klink-b0358.firebasestorage.app',
+    apiKey: 'AIzaSyD4EG_ubgWgpsaP9TJPC78DpOReR99BJEc',
+    appId: '1:70473962578:ios:96d926f4e5ad654e26bb8b',
+    messagingSenderId: '70473962578',
+    projectId: 'universal-distribucion',
+    storageBucket: 'universal-distribucion.firebasestorage.app',
     iosBundleId: 'com.universaldist.app',
   );
 
@@ -68,11 +68,11 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyBMDPKKPijW81wPAga8sXolBfVwLsc9W-0',
-    appId: '1:1066544431393:ios:e23758cc583ec8c3c97e60',
-    messagingSenderId: '1066544431393',
-    projectId: 'klink-b0358',
-    storageBucket: 'klink-b0358.firebasestorage.app',
+    apiKey: 'AIzaSyD4EG_ubgWgpsaP9TJPC78DpOReR99BJEc',
+    appId: '1:70473962578:ios:96d926f4e5ad654e26bb8b',
+    messagingSenderId: '70473962578',
+    projectId: 'universal-distribucion',
+    storageBucket: 'universal-distribucion.firebasestorage.app',
     iosBundleId: 'com.universaldist.app',
   );
 

@@ -64,4 +64,24 @@ abstract class PermissionHelper {
       'storage': await Permission.storage.isGranted,
     };
   }
+
+  /// Solicitar permiso de fotos
+  static Future<bool> requestPhotosPermission() async {
+    final status = await Permission.photos.request();
+    if (status.isPermanentlyDenied) {
+      await _showPermissionDeniedDialog();
+      return false;
+    }
+    return status.isGranted;
+  }
+
+  /// Solicitar permiso de cámara
+  static Future<bool> requestCameraPermission() async {
+    final status = await Permission.camera.request();
+    if (status.isPermanentlyDenied) {
+      await _showPermissionDeniedDialog();
+      return false;
+    }
+    return status.isGranted;
+  }
 }

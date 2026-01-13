@@ -7,6 +7,10 @@ import '../../controllers/auth_controller.dart';
 import '../../routes/app_routes.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import 'package:chat_messenger/theme/app_theme.dart';
+import 'package:chat_messenger/screens/home/controller/home_controller.dart';
+import 'package:chat_messenger/controllers/product_controller.dart';
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
 
@@ -22,81 +26,85 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     // Hardcoded data for visual matching
     final user = AuthController.instance.currentUser;
+    final isDarkMode = AppTheme.of(context).isDarkMode;
 
     return Scaffold(
-      backgroundColor: Colors.black, // Pure black background
-      body: SafeArea(
-        bottom: false, // Let navigation bar handle bottom padding
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // Adaptable background
+      body: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Header
+              // 1. Header (FUERA de las animaciones para que los botones funcionen)
               _buildHeader(user),
               const SizedBox(height: 24),
 
-              // 2. Search Bar
-              _buildSearchBar(),
-              const SizedBox(height: 24),
-
-              // 3. Metrics Grid
-              _buildMetricsGrid(),
-              const SizedBox(height: 24),
-
-              // 4. Stock Overview
-              const Text(
-                'Stock Overview',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'Inter',
-                ),
-              ),
-              const SizedBox(height: 12),
-              _buildStockOverview(),
-              const SizedBox(height: 24),
-
-              // 5. Recent Deliveries Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              // Resto del contenido con animaciones
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Recent Deliveries',
+                  // 2. Search Bar
+                  _buildSearchBar(),
+                  const SizedBox(height: 24),
+
+                  // 3. Metrics Grid
+                  _buildMetricsGrid(),
+                  const SizedBox(height: 24),
+
+                  // 4. Stock Overview
+                  Text(
+                    'Stock Overview',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                       fontFamily: 'Inter',
                     ),
                   ),
-                  TextButton(
-                    onPressed: () {},
-                    child: const Text(
-                      'See all',
-                      style: TextStyle(
-                        color: Color(0xFF4C8CFF), // Blueish text
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+                  const SizedBox(height: 12),
+                  _buildStockOverview(isDarkMode),
+                  const SizedBox(height: 24),
+
+                  // 5. Recent Deliveries Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Recent Deliveries',
+                        style: TextStyle(
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Inter',
+                        ),
                       ),
-                    ),
-                  )
-                ],
+                      TextButton(
+                        onPressed: () {},
+                        child: const Text(
+                          'See all',
+                          style: TextStyle(
+                            color: Color(0xFF4C8CFF), // Blueish text
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  // Filter/Placeholder for deliveries
+                  _buildRecentDeliveriesList(isDarkMode),
+                  
+                  // Extra space for bottom nav bar
+                  const SizedBox(height: 120),
+                ]
+                .animate(interval: 100.ms) // Slower stagger for visibility
+                .fade(duration: 600.ms)
+                .slideY(begin: 0.2, end: 0, duration: 600.ms, curve: Curves.easeOutQuad),
               ),
-              const SizedBox(height: 10),
-              // Filter/Placeholder for deliveries
-              _buildRecentDeliveriesList(),
-              
-              // Extra space for bottom nav bar
-              const SizedBox(height: 120),
-            ]
-            .animate(interval: 100.ms) // Slower stagger for visibility
-            .fade(duration: 600.ms)
-            .slideY(begin: 0.2, end: 0, duration: 600.ms, curve: Curves.easeOutQuad),
+            ],
           ),
         ),
-      ),
     );
   }
 
@@ -130,7 +138,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Text(
               'Ready to deliver!',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.6),
+                color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.6),
                 fontSize: 14,
               ),
             ),
@@ -139,8 +147,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Text(
                   user.fullname.isNotEmpty ? user.fullname : 'Oliver Bennet',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -155,31 +163,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         const Spacer(),
         // Actions
-        _buildCircleAction(IconlyLight.message), // Help/Question
+        _buildCircleAction(context, IconlyLight.message, onTap: () {
+          // TODO: Navegar a mensajes cuando esté implementado
+        }), // Messages
         const SizedBox(width: 12),
-        _buildCircleAction(IconlyLight.setting, onTap: () {
+        _buildCircleAction(context, IconlyLight.setting, onTap: () {
+          print('Settings button tapped in Dashboard'); // Debug
           Get.toNamed(AppRoutes.settings);
-        }), // Settings (antes era notification)
+        }), // Settings
       ],
     );
   }
 
-  Widget _buildCircleAction(IconData icon, {VoidCallback? onTap}) {
+  Widget _buildCircleAction(BuildContext context, IconData icon, {VoidCallback? onTap}) {
+    final isDarkMode = AppTheme.of(context).isDarkMode;
+    if (onTap == null) {
+      // Si no hay callback, retornar solo el Container sin interacción
+      return Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: isDarkMode ? const Color(0xFF2C2C2E) : Colors.grey[200],
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: isDarkMode ? Colors.white : Colors.black, size: 20),
+      );
+    }
+    
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        print('CircleAction tapped: $icon');
+        onTap();
+      },
+      behavior: HitTestBehavior.opaque,
       child: Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: const Color(0xFF2C2C2E),
-        shape: BoxShape.circle,
-      ),
-      child: Icon(icon, color: Colors.white, size: 20),
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: isDarkMode ? const Color(0xFF2C2C2E) : Colors.grey[200],
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: isDarkMode ? Colors.white : Colors.black, size: 20),
       ),
     );
   }
 
   Widget _buildSearchBar() {
+    final isDarkMode = AppTheme.of(context).isDarkMode;
+    final containerColor = isDarkMode ? const Color(0xFF1C1C1E) : Colors.grey[200];
+    final iconColor = isDarkMode ? Colors.white.withOpacity(0.5) : Colors.black54;
+    final textColor = isDarkMode ? Colors.white.withOpacity(0.5) : Colors.black54;
+    final borderColor = isDarkMode ? Colors.white.withOpacity(0.05) : Colors.transparent;
+
     return Row(
       children: [
         Expanded(
@@ -187,32 +222,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
             height: 50,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: const Color(0xFF1C1C1E),
+              color: containerColor,
               borderRadius: BorderRadius.circular(25),
-              border: Border.all(color: Colors.white.withOpacity(0.05)),
+              border: Border.all(color: borderColor),
             ),
             child: Row(
               children: [
-                Icon(IconlyLight.search, color: Colors.white.withOpacity(0.5)),
+                Icon(IconlyLight.search, color: iconColor),
                 const SizedBox(width: 12),
                 Text(
                   'Search...',
-                  style: TextStyle(color: Colors.white.withOpacity(0.5)),
+                  style: TextStyle(color: textColor),
                 ),
               ],
             ),
           ),
         ),
         const SizedBox(width: 12),
-        Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: const Color(0xFF1C1C1E),
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
+        GestureDetector(
+          onTap: () {
+            // TODO: Implementar filtro
+          },
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: containerColor,
+              shape: BoxShape.circle,
+              border: Border.all(color: borderColor),
+            ),
+            child: Icon(IconlyLight.filter, color: isDarkMode ? Colors.white : Colors.black, size: 20),
           ),
-          child: const Icon(IconlyLight.filter, color: Colors.white, size: 20),
         ),
       ],
     );
@@ -272,27 +313,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
  
-  Widget _buildStockOverview() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1C1C1E),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildStockItem(label: 'In Stock', value: '345', color: Colors.green),
-          Container(width: 1, height: 24, color: Colors.white.withOpacity(0.1)),
-          _buildStockItem(label: 'Low Stock', value: '15', color: Colors.orange),
-          Container(width: 1, height: 24, color: Colors.white.withOpacity(0.1)),
-          _buildStockItem(label: 'Out of Stock', value: '6', color: Colors.red),
-        ],
+  Widget _buildStockOverview(bool isDarkMode) {
+    return GestureDetector(
+      onTap: () {
+        _showPinDialog(context);
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDarkMode ? const Color(0xFF1C1C1E) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: isDarkMode ? [] : [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildStockItem(label: 'In Stock', value: '345', color: Colors.green, isDarkMode: isDarkMode),
+            Container(width: 1, height: 24, color: isDarkMode ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.2)),
+            _buildStockItem(label: 'Low Stock', value: '15', color: Colors.orange, isDarkMode: isDarkMode),
+            Container(width: 1, height: 24, color: isDarkMode ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.2)),
+            _buildStockItem(label: 'Out of Stock', value: '6', color: Colors.red, isDarkMode: isDarkMode),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildStockItem({required String label, required String value, required Color color}) {
+  Widget _buildStockItem({required String label, required String value, required Color color, required bool isDarkMode}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -303,7 +357,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(width: 4),
             Text(
               label,
-              style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
+              style: TextStyle(color: isDarkMode ? Colors.white.withOpacity(0.6) : Colors.black54, fontSize: 12),
             ),
           ],
         ),
@@ -312,8 +366,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           padding: const EdgeInsets.only(left: 18.0),
           child: Text(
             value,
-            style: const TextStyle(
-              color: Colors.white, 
+            style: TextStyle(
+              color: isDarkMode ? Colors.white : Colors.black, 
               fontWeight: FontWeight.bold, 
               fontSize: 16,
               fontFamily: 'Courier',
@@ -325,19 +379,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
   
-  Widget _buildRecentDeliveriesList() {
+  Widget _buildRecentDeliveriesList(bool isDarkMode) {
     return Column(
       children: [
         _buildDeliveryItem(
           title: 'Grocery Order #2458',
           subtitle: 'Delivered • 15 mins ago',
           imagePath: 'assets/images/dashboard/food_grocery_bag.png',
+          isDarkMode: isDarkMode,
         ),
         const SizedBox(height: 12),
         _buildDeliveryItem(
           title: 'Fresh Fruit Restock',
           subtitle: 'Delivered • 2 hrs ago',
           imagePath: 'assets/images/dashboard/food_fruit_basket.png',
+          isDarkMode: isDarkMode,
         ),
       ],
     );
@@ -347,12 +403,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required String title,
     required String subtitle,
     required String imagePath,
+    required bool isDarkMode,
   }) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1C1C1E),
+        color: isDarkMode ? const Color(0xFF1C1C1E) : Colors.white,
         borderRadius: BorderRadius.circular(16),
+        boxShadow: isDarkMode ? [] : [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -374,17 +438,92 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               Text(
                 title,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white : Colors.black, 
+                  fontWeight: FontWeight.bold
+                ),
               ),
                Text(
                 subtitle,
-                style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white.withOpacity(0.5) : Colors.grey, 
+                  fontSize: 12
+                ),
               ),
             ],
           ),
           const Spacer(),
-          const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 14)
+          Icon(Icons.arrow_forward_ios, color: isDarkMode ? Colors.white : Colors.black, size: 14)
           .animate().moveX(begin: -5, end: 0, duration: 600.ms, curve: Curves.easeOut),
+        ],
+      ),
+    );
+  }
+
+  void _showPinDialog(BuildContext context) {
+    final TextEditingController pinController = TextEditingController();
+    
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1E),
+        title: const Text('Acceso Admin', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Ingresa el PIN para ver el stock',
+              style: TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: pinController,
+              keyboardType: TextInputType.number,
+              obscureText: true,
+              style: const TextStyle(color: Colors.white, fontSize: 24, letterSpacing: 8),
+              textAlign: TextAlign.center,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.black.withOpacity(0.3),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                hintText: 'PIN',
+                hintStyle: TextStyle(color: Colors.white.withOpacity(0.3), letterSpacing: 1),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
+          ),
+          TextButton(
+            onPressed: () {
+              if (pinController.text == '1212') {
+                Get.back(); // Close dialog
+                
+                debugPrint('📦 [DASHBOARD] PIN Correct. Navigating to Stock List');
+                // Activar modo admin para ver la lista de stock completa
+                final productController = Get.find<ProductController>();
+                productController.isAdminMode.value = true;
+                
+                // Navegar a la pestaña de productos
+                final homeController = Get.find<HomeController>();
+                homeController.pageIndex.value = 3; // Index 3 is Products/Stock
+              } else {
+                Get.snackbar(
+                  'Error',
+                  'PIN Incorrecto',
+                  backgroundColor: Colors.redAccent,
+                  colorText: Colors.white,
+                  snackPosition: SnackPosition.TOP,
+                );
+              }
+            },
+            child: const Text('Acceder', style: TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
     );
@@ -409,15 +548,32 @@ class InteractiveMetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Colors based on selection state (Gold vs Dark)
-    final bg = isSelected ? const Color(0xFFFFD700) : const Color(0xFF1C1C1E);
-    final txt = isSelected ? Colors.black : Colors.white;
-    final subTxt = isSelected ? Colors.black.withOpacity(0.7) : Colors.white.withOpacity(0.6);
-    final arrowColor = isSelected ? Colors.black : Colors.white;
-    final arrowBg = isSelected ? Colors.white : const Color(0xFF000000);
+    final isDarkMode = AppTheme.of(context).isDarkMode;
+    
+    // Colors based on selection state (Gold vs Dark/Light)
+    final bg = isSelected 
+        ? const Color(0xFFFFD700) 
+        : (isDarkMode ? const Color(0xFF1C1C1E) : Colors.white);
+        
+    final txt = isSelected 
+        ? Colors.black 
+        : (isDarkMode ? Colors.white : Colors.black);
+        
+    final subTxt = isSelected 
+        ? Colors.black.withOpacity(0.7) 
+        : (isDarkMode ? Colors.white.withOpacity(0.6) : Colors.black54);
+        
+    final arrowColor = isSelected 
+        ? Colors.black 
+        : (isDarkMode ? Colors.white : Colors.black);
+        
+    final arrowBg = isSelected 
+        ? Colors.white 
+        : (isDarkMode ? const Color(0xFF000000) : Colors.grey[200]);
 
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -426,6 +582,13 @@ class InteractiveMetricCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(24),
+          boxShadow: isSelected || isDarkMode ? [] : [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -485,4 +648,6 @@ class InteractiveMetricCard extends StatelessWidget {
       ),
     );
   }
+
+
 }

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:chat_messenger/api/auth_api.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' hide Filter;
+import 'package:firebase_auth/firebase_auth.dart' hide User;
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -33,7 +34,7 @@ abstract class UserApi {
   static void configureRealtimeDatabase() {
     _realtime.setLoggingEnabled(false);
     _realtime.setPersistenceEnabled(true);
-    _realtime.databaseURL = 'https://klink-b0358-default-rtdb.firebaseio.com';
+    _realtime.databaseURL = 'https://universal-distribucion-default-rtdb.firebaseio.com';
   }
 
   static Future<dynamic> createAccount({
@@ -42,19 +43,36 @@ abstract class UserApi {
     required String username,
   }) async {
     try {
-      final firebaseUser = AuthController.instance.firebaseUser!;
+      debugPrint('💾 ===== CREANDO CUENTA =====');
+      final authController = AuthController.instance;
+      
+      // Verificar que el usuario esté autenticado
+      if (authController.firebaseUser == null) {
+        debugPrint('💾 ❌ ERROR: Usuario no autenticado');
+        return 'Usuario no autenticado';
+      }
+      
+      final firebaseUser = authController.firebaseUser!;
+      debugPrint('💾 Usuario autenticado: ${firebaseUser.uid}');
+      debugPrint('💾 Email: ${firebaseUser.email}');
+      debugPrint('💾 Email verificado: ${firebaseUser.emailVerified}');
+      debugPrint('💾 Provider: ${authController.provider}');
 
       // Get Firebase User Info:
       final String userId = firebaseUser.uid;
       final String email = firebaseUser.email ?? '';
       final String deviceToken = await _firebaseMsg.getToken() ?? '';
+      
+      debugPrint('💾 Device Token: ${deviceToken.isNotEmpty ? "✅" : "❌"}');
 
       // Upload profile photo
       String photoUrl = '';
 
       // Check file
       if (photoFile != null) {
+        debugPrint('💾 Subiendo foto de perfil...');
         photoUrl = await AppHelper.uploadFile(file: photoFile, userId: userId);
+        debugPrint('💾 Foto subida: $photoUrl');
       }
 
       // Set profile info
@@ -66,19 +84,38 @@ abstract class UserApi {
         email: email,
         bio: 'default_bio'.trParams({'appName': AppConfig.appName}),
         deviceToken: deviceToken,
-        loginProvider: AuthController.instance.provider,
+        loginProvider: authController.provider,
         lastActive: DateTime.now(),
         createdAt: DateTime.now(),
         isOnline: true,
       );
 
       // Save data
+      debugPrint('💾 Creando documento de usuario en Firestore...');
+      debugPrint('💾 Colección: Users');
+      debugPrint('💾 Documento ID: $userId');
+      debugPrint('💾 Datos: ${user.toMap()}');
+      
+      // Verificar autenticación antes de crear
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        debugPrint('💾 ❌ ERROR: FirebaseAuth.currentUser es null');
+        return 'Usuario no autenticado en Firebase';
+      }
+      debugPrint('💾 FirebaseAuth.currentUser.uid: ${currentUser.uid}');
+      
       await _firestore.collection('Users').doc(userId).set(user.toMap());
+      debugPrint('💾 ✅ Documento de usuario creado exitosamente en Firestore');
 
       // Subscribe for Push Notifications
       _firebaseMsg.subscribeToTopic('NOTIFY_USERS');
+      debugPrint('💾 ===== CUENTA CREADA EXITOSAMENTE =====');
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('💾 ❌ ===== ERROR AL CREAR CUENTA =====');
+      debugPrint('💾 ❌ Error: $e');
+      debugPrint('💾 ❌ Stack trace: $stackTrace');
+      debugPrint('💾 ❌ Tipo de error: ${e.runtimeType}');
       return e;
     }
   }
@@ -120,13 +157,19 @@ abstract class UserApi {
 
   static Future<User?> getUser(String userId) async {
     try {
+      debugPrint('🔍 UserApi.getUser() -> Buscando usuario: $userId');
+      debugPrint('🔍 Usuario autenticado: ${AuthController.instance.firebaseUser != null}');
       final doc = await _firestore.collection('Users').doc(userId).get();
+      debugPrint('🔍 Documento existe: ${doc.exists}');
       if (doc.exists && doc.data() != null) {
+        debugPrint('🔍 ✅ Usuario encontrado en Firestore');
         return User.fromMap(doc.data()!);
       }
+      debugPrint('🔍 ❌ Usuario no encontrado en Firestore');
       return null;
-    } catch (e) {
-      debugPrint('UserApi.getUser() -> Error: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ UserApi.getUser() -> Error: $e');
+      debugPrint('❌ Stack trace: $stackTrace');
       return null;
     }
   }

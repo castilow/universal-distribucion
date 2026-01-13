@@ -145,17 +145,16 @@ const LinearGradient glassGradient = LinearGradient(
 
 // <-- Get system overlay theme style -->
 SystemUiOverlayStyle getSystemOverlayStyle(bool isDarkMode) {
-  final Brightness brightness = isDarkMode ? Brightness.dark : Brightness.light;
-
   return SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    // iOS only
-    statusBarBrightness: brightness,
-    // Android only
+    // En iOS siempre es transparente, pero se controla el color del fondo detrás
+    statusBarColor: isDarkMode ? Colors.black : Colors.white,
+    // iOS only - Brightness.dark = iconos claros (blancos) para fondos oscuros
+    statusBarBrightness: isDarkMode ? Brightness.dark : Brightness.light,
+    // Android only - controla el brillo de los iconos en la barra de estado
     statusBarIconBrightness: isDarkMode ? Brightness.light : Brightness.dark,
-    // Android only
-    systemNavigationBarColor: isDarkMode ? darkThemeBgColor : lightThemeBgColor,
-    // Android only
+    // Barra de navegación negra en modo oscuro
+    systemNavigationBarColor: isDarkMode ? Colors.black : Colors.white,
+    // Android only - controla el brillo de los iconos en la barra de navegación
     systemNavigationBarIconBrightness: isDarkMode
         ? Brightness.light
         : Brightness.dark,

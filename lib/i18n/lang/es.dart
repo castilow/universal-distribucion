@@ -340,6 +340,15 @@ final Map<String, String> spanish = {
   "Transacciones Recientes": "Transacciones Recientes",
   
   // Authentication errors
+  "failed_to_sign_in_with_email_and_password": "Error al iniciar sesión: @error",
+  "failed_to_sign_up_with_email_and_password": "Error al crear cuenta: @error",
   "failed_to_sign_in_with_google": "Error al iniciar sesión con Google: @error",
   "failed_to_sign_in_with_apple": "Error al iniciar sesión con Apple: @error",
+  "invalid_credentials": "El correo electrónico o la contraseña son incorrectos. Por favor, verifica tus credenciales.",
+  "user_not_found": "No existe una cuenta con este correo electrónico. Por favor, crea una cuenta primero.",
+  "wrong_password": "La contraseña es incorrecta. Por favor, intenta de nuevo o usa 'Olvidé mi contraseña'.",
+  "too_many_requests": "Demasiadas solicitudes. Por favor, espera unos minutos antes de intentar de nuevo.",
+  "email_already_in_use": "Este correo electrónico ya está registrado. Por favor, inicia sesión en lugar de crear una cuenta nueva.",
+  "weak_password": "La contraseña es muy débil. Por favor, usa una contraseña más segura (mínimo 6 caracteres).",
+  "operation_not_allowed": "El registro con email y contraseña no está habilitado. Por favor, contacta al soporte.",
 }; 
