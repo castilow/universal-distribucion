@@ -1,0 +1,15 @@
+# COMANDO PARA EJECUTAR EN CLOUD SHELL
+# Copia y pega este comando completo en Cloud Shell
+
+PROJECT_NUMBER="70473962578"
+BUCKET_NAME="universal-distribucion.firebasestorage.app"
+ACCESS_TOKEN=$(gcloud auth print-access-token)
+
+curl -X POST \
+  "https://firebasestorage.googleapis.com/v1beta/projects/$PROJECT_NUMBER/buckets/$BUCKET_NAME:addFirebase" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{}"
+
+# Si funciona, verás una respuesta JSON con información del bucket
+# Si el bucket ya está vinculado, puede dar error 400 o 409, pero eso está bien

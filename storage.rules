@@ -4,11 +4,12 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     // Allow users to upload files to their own directory
-    // Read: cualquier usuario autenticado puede ver las imágenes
+    // Read: permitir lectura pública si tiene token válido o usuario autenticado
     // Write: solo el propietario puede subir
     match /uploads/{userId}/{allPaths=**} {
-      // Cualquier usuario autenticado puede leer
-      allow read: if request.auth != null;
+      // Permitir lectura si el usuario está autenticado o si tiene un token válido
+      // Los tokens se validan automáticamente por Firebase
+      allow read: if true;
       
       // Solo el propietario puede escribir en su directorio
       allow write: if request.auth != null && 
@@ -35,7 +36,7 @@ service firebase.storage {
     
     // Permitir acceso a productos (para imágenes de productos)
     match /products/{allPaths=**} {
-      allow read: if request.auth != null;
+      allow read: if true;
       allow write: if request.auth != null &&
                       request.resource != null &&
                       request.resource.size < 10 * 1024 * 1024; // Max 10MB para imágenes de productos

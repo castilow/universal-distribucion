@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_iconly/flutter_iconly.dart';
 import 'package:get/get.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chat_messenger/components/cached_image_with_retry.dart';
 
 import 'package:chat_messenger/tabs/products/category_products_screen.dart';
 import 'package:chat_messenger/tabs/products/add_product_screen.dart';
@@ -202,6 +204,47 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
   }
 
+  Widget _buildCategoryImage(String imagePath, Color goldColor) {
+    // Detectar si es una URL (empieza con http) o un asset local
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return CachedImageWithRetry(
+        imageUrl: imagePath,
+        fit: BoxFit.cover,
+        placeholder: Container(
+          color: Colors.grey[300],
+          child: Center(
+            child: CircularProgressIndicator(
+              color: goldColor,
+              strokeWidth: 2,
+            ),
+          ),
+        ),
+        errorWidget: Container(
+          color: Colors.grey[300],
+          child: Icon(
+            IconlyLight.image,
+            color: Colors.grey[600],
+            size: 48,
+          ),
+        ),
+      );
+    } else {
+      // Es un asset local
+      return Image.asset(
+        imagePath,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(
+          color: Colors.grey[300],
+          child: Icon(
+            IconlyLight.image,
+            color: Colors.grey[600],
+            size: 48,
+          ),
+        ),
+      );
+    }
+  }
+
   Widget _buildCategoryCard(Map<String, String> category, bool isDarkMode) {
     const goldColor = Color(0xFFD4AF37);
     
@@ -247,10 +290,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   ),
                   color: isDarkMode ? Colors.black : Colors.grey[100],
                 ),
-                  child: Image.asset(
-                    category['image']!,
-                    fit: BoxFit.cover,
-                  )
+                  child: _buildCategoryImage(category['image']!, goldColor)
                   .animate(onPlay: (controller) => controller.repeat(reverse: true))
                   .scaleXY(begin: 1.0, end: 1.05, duration: 1500.ms, curve: Curves.easeInOut)
                   .moveY(begin: 0, end: -10, duration: 1500.ms, curve: Curves.easeInOut), // Efecto flotante 3D
@@ -1025,23 +1065,45 @@ class _ProductsScreenState extends State<ProductsScreen> {
         );
       }
 
-      // Si hay búsqueda activa, mostrar todos los productos sin agrupar
+      // Si hay búsqueda activa, mostrar todos los productos encontrados
       if (productController.searchQuery.value.isNotEmpty) {
-      return SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final product = productsToShow[index];
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-              child: _buildAdminProductCard(product, isDarkMode, productController),
-            );
-          },
-          childCount: productsToShow.length,
-          addAutomaticKeepAlives: false,
-          addRepaintBoundaries: true,
-          addSemanticIndexes: false,
-        ),
-      );
+        // Mostrar indicador de carga mientras busca
+        if (productController.isLoadingSearch.value) {
+          return SliverFillRemaining(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: goldColor),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Buscando productos...',
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.white54 : Colors.black45,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        
+        return SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              final product = productsToShow[index];
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                child: _buildAdminProductCard(product, isDarkMode, productController),
+              );
+            },
+            childCount: productsToShow.length,
+            addAutomaticKeepAlives: false,
+            addRepaintBoundaries: true,
+            addSemanticIndexes: false,
+          ),
+        );
       }
 
       // Group products by category (solo cuando no hay búsqueda)
@@ -1187,7 +1249,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 borderRadius: BorderRadius.circular(16),
                  child: product['image'] != null && product['image'].toString().isNotEmpty
                     ? (product['image'].toString().startsWith('http')
-                        ? Image.network(product['image'], fit: BoxFit.cover)
+                        ? CachedImageWithRetry(
+                            imageUrl: product['image'],
+                            fit: BoxFit.cover,
+                            errorWidget: const Icon(IconlyLight.image),
+                          )
                         : Image.file(File(product['image']), fit: BoxFit.cover, errorBuilder: (_,__,___) => const Icon(IconlyLight.image)))
                     : Icon(IconlyLight.image, color: Colors.grey[400]),
               ),
@@ -1338,7 +1404,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         borderRadius: BorderRadius.circular(16),
                         child: product['image'] != null && product['image'].toString().isNotEmpty
                           ? (product['image'].toString().startsWith('http')
-                              ? Image.network(product['image'], fit: BoxFit.contain)
+                              ? CachedImageWithRetry(
+                                  imageUrl: product['image'],
+                                  fit: BoxFit.contain,
+                                  errorWidget: const Icon(IconlyLight.image, size: 50),
+                                )
                               : Image.file(File(product['image']), fit: BoxFit.contain, errorBuilder: (_,__,___) => const Icon(IconlyLight.image, size: 50)))
                           : Icon(IconlyLight.image, color: Colors.grey[400], size: 60),
                       ),

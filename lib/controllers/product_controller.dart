@@ -17,6 +17,15 @@ class ProductController extends GetxController {
   // Búsqueda de productos
   final RxString searchQuery = ''.obs;
   
+  // Resultados de búsqueda (productos encontrados en Firestore)
+  final RxList<Map<String, dynamic>> searchResults = <Map<String, dynamic>>[].obs;
+  
+  // Variables para paginación de búsqueda
+  final RxBool isLoadingSearch = false.obs;
+  
+  // Timer para debounce de búsqueda
+  Timer? _searchDebounceTimer;
+  
   // Stream subscription para productos
   StreamSubscription<List<Map<String, dynamic>>>? _productsSubscription;
   
@@ -319,24 +328,79 @@ class ProductController extends GetxController {
       return allProducts;
     }
     
-    final query = searchQuery.value.toLowerCase();
-    return allProducts.where((product) {
-      final name = (product['name'] ?? '').toString().toLowerCase();
-      final category = (product['category'] ?? '').toString().toLowerCase();
-      final description = (product['description'] ?? '').toString().toLowerCase();
-      
-      return name.contains(query) || 
-             category.contains(query) || 
-             description.contains(query);
-    }).toList();
+    // Si hay búsqueda activa, usar los resultados de búsqueda de Firestore
+    return searchResults;
   }
 
   void setSearchQuery(String query) {
     searchQuery.value = query;
+    
+    // Cancelar búsqueda anterior si existe
+    _searchDebounceTimer?.cancel();
+    
+    if (query.isEmpty) {
+      clearSearch();
+      return;
+    }
+    
+    // Debounce: esperar 300ms antes de buscar (optimización)
+    _searchDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      searchProductsInFirestore(query);
+    });
   }
 
   void clearSearch() {
+    _searchDebounceTimer?.cancel();
     searchQuery.value = '';
+    searchResults.clear();
+  }
+
+  // Buscar productos en Firestore (optimizado)
+  Future<void> searchProductsInFirestore(String query) async {
+    if (query.isEmpty) {
+      clearSearch();
+      return;
+    }
+
+    // Si la query cambió mientras se estaba buscando, cancelar
+    if (searchQuery.value != query) {
+      return;
+    }
+
+    try {
+      isLoadingSearch.value = true;
+      debugPrint('🔍 [PRODUCT_CONTROLLER] Buscando productos: "$query"');
+      
+      // Obtener todos los productos que coinciden (búsqueda optimizada)
+      final products = await ProductApi.searchProducts(query: query);
+      
+      // Normalizar productos
+      final normalized = products.map((p) {
+        final map = Map<String, dynamic>.from(p);
+        if (map['image'] == null && map['imageUrl'] != null) {
+          map['image'] = map['imageUrl'];
+        }
+        if (map['imageUrl'] == null && map['image'] != null) {
+          map['imageUrl'] = map['image'];
+        }
+        return map;
+      }).toList();
+      
+      // Verificar que la query no haya cambiado durante la búsqueda
+      if (searchQuery.value == query) {
+        searchResults.assignAll(normalized);
+        debugPrint('🔍 [PRODUCT_CONTROLLER] Búsqueda completada: ${searchResults.length} productos encontrados');
+      }
+    } catch (e) {
+      debugPrint('❌ [PRODUCT_CONTROLLER] Error buscando productos: $e');
+      if (searchQuery.value == query) {
+        searchResults.clear();
+      }
+    } finally {
+      if (searchQuery.value == query) {
+        isLoadingSearch.value = false;
+      }
+    }
   }
 
   // Refrescar productos manualmente
@@ -368,6 +432,7 @@ class ProductController extends GetxController {
   @override
   void onClose() {
     _productsSubscription?.cancel();
+    _searchDebounceTimer?.cancel();
     super.onClose();
   }
 }

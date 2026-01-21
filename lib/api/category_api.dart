@@ -39,7 +39,8 @@ abstract class CategoryApi {
         'createdAt': Timestamp.fromDate(now),
       };
 
-      await categoriesRef.doc(categoryId).set(categoryData);
+      // Usar SetOptions(merge: false) para forzar creación y que las reglas de create se apliquen
+      await categoriesRef.doc(categoryId).set(categoryData, SetOptions(merge: false));
       debugPrint('✅ [CATEGORY_API] Categoría guardada en Firestore: $categoryId');
 
     } catch (e) {

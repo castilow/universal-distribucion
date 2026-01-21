@@ -131,6 +131,55 @@ abstract class AppHelper {
     }
   }
 
+  // Regenerate Firebase Storage download URL from old URL
+  // This is useful when tokens expire (412 error)
+  static Future<String?> regenerateImageUrl(String oldUrl) async {
+    try {
+      debugPrint('🔄 [REGENERATE_URL] Regenerando URL para: $oldUrl');
+      
+      // First, try to extract path manually from URL
+      // Format: https://firebasestorage.googleapis.com/v0/b/BUCKET/o/encodedPath?alt=media&token=...
+      final uri = Uri.parse(oldUrl);
+      
+      // Find the path after /o/
+      final pathIndex = uri.path.indexOf('/o/');
+      if (pathIndex != -1) {
+        // Get the encoded path after /o/
+        final encodedPath = uri.path.substring(pathIndex + 3); // +3 to skip "/o/"
+        // Decode URL encoding (%2F -> /)
+        final decodedPath = Uri.decodeComponent(encodedPath);
+        
+        debugPrint('🔄 [REGENERATE_URL] Path extraído: $decodedPath');
+        
+        // Create reference from path and get fresh URL
+        final ref = FirebaseStorage.instance.ref().child(decodedPath);
+        final newUrl = await ref.getDownloadURL();
+        
+        debugPrint('✅ [REGENERATE_URL] Nueva URL generada: $newUrl');
+        return newUrl;
+      }
+      
+      // Fallback: try refFromURL (may fail with expired tokens)
+      debugPrint('⚠️ [REGENERATE_URL] Intentando refFromURL como fallback');
+      final ref = FirebaseStorage.instance.refFromURL(oldUrl);
+      final newUrl = await ref.getDownloadURL();
+      debugPrint('✅ [REGENERATE_URL] Nueva URL generada con refFromURL');
+      return newUrl;
+    } catch (e) {
+      final errorStr = e.toString();
+      debugPrint('❌ [REGENERATE_URL] Error regenerando URL: $e');
+      
+      // Check if it's a service account permissions error (412)
+      if (errorStr.contains('412') || errorStr.contains('service account') || 
+          errorStr.contains('missing necessary permissions')) {
+        debugPrint('⚠️ [REGENERATE_URL] Error de permisos de cuenta de servicio. '
+                   'Necesitas re-vincular el bucket en Firebase Console.');
+      }
+      
+      return null;
+    }
+  }
+
   // Delete the storage files by path
   static Future<void> deleteStorageFiles(String path) async {
     try {

@@ -1,0 +1,51 @@
+RESUMEN PARA REPORTE DE BUG - FIREBASE STORAGE ERROR 412
+
+TÍTULO:
+Firebase Storage Error 412 persiste incluso con rol Owner asignado en IAM
+
+DESCRIPCIÓN:
+Las imágenes almacenadas en Firebase Storage no se pueden cargar debido a un error HTTP 412 (Precondition Failed), a pesar de que la cuenta de servicio tiene el rol "Propietario" (Owner) asignado en IAM.
+
+INFORMACIÓN DEL PROYECTO:
+- Project ID: universal-distribucion
+- Project Number: 70473962578
+- Bucket: universal-distribucion.firebasestorage.app
+- Service Account: service-70473962578@gcp-sa-firebasestorage.iam.gserviceaccount.com
+
+ERROR:
+HTTP request failed, statusCode: 412
+Mensaje: "A required service account is missing necessary permissions. Please resolve by visiting the Storage page of the Firebase Console and re-linking your Firebase bucket"
+
+EVIDENCIA CRÍTICA:
+La cuenta de servicio tiene asignados los siguientes roles en IAM:
+✅ Cloud Storage for Firebase Service Agent (roles/firebasestorage.serviceAgent)
+✅ Propietario (Owner) - Rol con acceso completo
+
+A pesar de tener el rol Owner (máximo nivel de permisos), el error 412 persiste. Esto confirma que NO es un problema de configuración de permisos, sino un bug en el sistema de Firebase Storage.
+
+ACCIONES REALIZADAS:
+1. ✅ Asignado rol IAM "Cloud Storage for Firebase Service Agent"
+2. ✅ Asignado rol "Propietario" (Owner) - incluso con máximo nivel de permisos falla
+3. ✅ Reglas de Storage configuradas con `allow read: if true`
+4. ✅ Más de 8 horas esperando propagación de permisos
+5. ✅ Re-vinculado el bucket usando API REST: POST .../buckets/...:addFirebase (respuesta exitosa)
+6. ✅ Intentado regenerar URLs con `getDownloadURL()` - falla con 412
+7. ✅ Intentado cargar directamente con `getData()` - también falla con 412
+
+IMPACTO:
+- Las imágenes subidas previamente no se pueden visualizar
+- Los usuarios no pueden ver imágenes de productos
+- La funcionalidad principal de la aplicación está afectada
+
+LOGS DE ERROR:
+```
+[firebase_storage/unknown] Unexpected 412 code from backend
+HTTP request failed, statusCode: 412
+```
+
+ENLACES ÚTILES:
+- IAM Console: https://console.cloud.google.com/iam-admin/iam?project=universal-distribucion
+- Storage Console: https://console.firebase.google.com/project/universal-distribucion/storage
+
+SOLICITUD:
+Necesitamos asistencia urgente para investigar por qué el error 412 persiste incluso con el rol Owner asignado, y resolver el problema para que las imágenes puedan cargarse correctamente.

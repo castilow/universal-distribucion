@@ -164,14 +164,41 @@ service cloud.firestore {
       // Solo usuarios autenticados pueden crear productos
       // El userId en el documento debe coincidir con el usuario autenticado
       allow create: if signedIn() && 
+                       request.resource != null &&
+                       request.resource.data != null &&
                        request.resource.data.userId == request.auth.uid;
       
       // Solo el propietario puede actualizar sus productos
-      allow update: if signedIn() && 
-                       resource.data.userId == request.auth.uid;
+      // También permitir actualizar productos que no tienen userId o tienen userId incorrecto
+      // siempre que el update asigne el userId del usuario actual
+      allow update: if signedIn() && (
+                       // El producto tiene userId y coincide con el usuario autenticado
+                       (resource != null &&
+                        resource.data != null &&
+                        resource.data.userId == request.auth.uid) ||
+                       // El producto no tiene userId, pero solo si el update asigna el userId del usuario actual
+                       (resource != null &&
+                        resource.data != null &&
+                        (!resource.data.keys().hasAny(['userId']) || 
+                         resource.data.userId == null ||
+                         resource.data.userId == '') &&
+                        request.resource != null &&
+                        request.resource.data != null &&
+                        request.resource.data.userId == request.auth.uid) ||
+                       // El producto tiene userId diferente, pero el update asigna el userId del usuario actual
+                       // Esto permite corregir productos que se crearon con un userId incorrecto
+                       (resource != null &&
+                        resource.data != null &&
+                        resource.data.userId != request.auth.uid &&
+                        request.resource != null &&
+                        request.resource.data != null &&
+                        request.resource.data.userId == request.auth.uid)
+                     );
       
       // Solo el propietario puede eliminar sus productos
       allow delete: if signedIn() && 
+                       resource != null &&
+                       resource.data != null &&
                        resource.data.userId == request.auth.uid;
     }
     
@@ -183,14 +210,20 @@ service cloud.firestore {
       // Solo usuarios autenticados pueden crear categorías
       // El userId en el documento debe coincidir con el usuario autenticado
       allow create: if signedIn() && 
+                       request.resource != null &&
+                       request.resource.data != null &&
                        request.resource.data.userId == request.auth.uid;
       
       // Solo el propietario puede actualizar sus categorías
       allow update: if signedIn() && 
+                       resource != null &&
+                       resource.data != null &&
                        resource.data.userId == request.auth.uid;
       
       // Solo el propietario puede eliminar sus categorías
       allow delete: if signedIn() && 
+                       resource != null &&
+                       resource.data != null &&
                        resource.data.userId == request.auth.uid;
     }
   }

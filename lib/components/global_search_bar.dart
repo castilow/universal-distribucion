@@ -9,6 +9,7 @@ import 'package:chat_messenger/screens/home/controller/home_controller.dart';
 import 'package:chat_messenger/controllers/product_controller.dart';
 import 'package:flutter_iconly/flutter_iconly.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chat_messenger/components/cached_image_with_retry.dart';
 import 'dart:ui';
 import 'dart:io';
 import 'dart:async';
@@ -612,10 +613,10 @@ class GlobalSearchBarState extends State<GlobalSearchBar>
                     borderRadius: BorderRadius.circular(16),
                     child: product['image'] != null && product['image'].toString().isNotEmpty
                       ? (product['image'].toString().startsWith('http')
-                          ? CachedNetworkImage(
+                          ? CachedImageWithRetry(
                               imageUrl: product['image'],
                               fit: BoxFit.cover,
-                              placeholder: (context, url) => Container(
+                              placeholder: Container(
                                 color: isDarkMode ? Colors.black.withOpacity(0.3) : Colors.grey[100],
                                 child: Center(
                                   child: SizedBox(
@@ -628,7 +629,7 @@ class GlobalSearchBarState extends State<GlobalSearchBar>
                                   ),
                                 ),
                               ),
-                              errorWidget: (context, url, error) => Icon(
+                              errorWidget: Icon(
                                 IconlyLight.image, 
                                 color: isDarkMode ? Colors.white24 : Colors.grey[300],
                                 size: 28,
@@ -872,13 +873,13 @@ class GlobalSearchBarState extends State<GlobalSearchBar>
                             borderRadius: BorderRadius.circular(24),
                             child: product['image'] != null && product['image'].toString().isNotEmpty
                               ? (product['image'].toString().startsWith('http')
-                                  ? CachedNetworkImage(
+                                  ? CachedImageWithRetry(
                                       imageUrl: product['image'],
                                       fit: BoxFit.cover,
-                                      placeholder: (context, url) => Center(
+                                      placeholder: Center(
                                         child: CircularProgressIndicator(color: goldColor, strokeWidth: 2),
                                       ),
-                                      errorWidget: (context, url, error) => _buildPlaceholder(goldColor, isDarkMode),
+                                      errorWidget: _buildPlaceholder(goldColor, isDarkMode),
                                     )
                                   : Image.file(File(product['image']), fit: BoxFit.cover, errorBuilder: (_,__,___) => _buildPlaceholder(goldColor, isDarkMode)))
                               : _buildPlaceholder(goldColor, isDarkMode),

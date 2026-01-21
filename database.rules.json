@@ -11,7 +11,8 @@
     "status": {
       "$userId": {
         ".read": "auth != null",
-        ".write": "auth != null && auth.uid == $userId"
+        ".write": "auth != null && auth.uid == $userId",
+        ".validate": "newData.hasChildren(['isOnline', 'lastActive']) && newData.child('isOnline').isBoolean() && newData.child('lastActive').isNumber()"
       }
     }
   }

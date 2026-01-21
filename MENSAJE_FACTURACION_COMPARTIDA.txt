@@ -1,0 +1,19 @@
+Hola Alejandro,
+
+Acabo de descubrir algo crítico: tengo OTRO proyecto vinculado a la misma cuenta de facturación con una deuda de 200€.
+
+Los logs muestran:
+- "The billing account for the owning project is disabled in state delinquent"
+- El error 412 está afectando a AMBOS proyectos ahora
+
+Entiendo que los proyectos NO son independientes si comparten la misma cuenta de facturación. Si una cuenta está en estado "delinquent", puede bloquear TODOS los proyectos vinculados.
+
+¿Qué puedo hacer?
+1. ¿Puedo pagar solo la deuda del otro proyecto para desbloquear ambos?
+2. ¿Pueden desbloquear Storage para el proyecto "universal-distribucion" específicamente mientras resuelvo la deuda?
+3. ¿Es posible separar las cuentas de facturación para que los proyectos sean independientes?
+
+Necesito urgentemente que Storage funcione en "universal-distribucion" (Project ID: 70473962578).
+
+Gracias,
+[Tu nombre]

@@ -128,6 +128,49 @@ abstract class ProductApi {
       debugPrint('📝 [PRODUCT_API] Actualizando producto: $productId');
       
       final currentUser = AuthController.instance.currentUser;
+      final firebaseUser = AuthController.instance.firebaseUser;
+      final currentUserId = firebaseUser?.uid ?? currentUser.userId;
+      
+      debugPrint('🔑 [PRODUCT_API] Usuario autenticado (Firebase): ${firebaseUser?.uid}');
+      debugPrint('🔑 [PRODUCT_API] Usuario autenticado (currentUser): ${currentUser.userId}');
+      debugPrint('🔑 [PRODUCT_API] Usuario a usar: $currentUserId');
+      
+      // Verificar primero que el producto existe y pertenece al usuario
+      final productDoc = await productsRef.doc(productId).get();
+      if (!productDoc.exists) {
+        debugPrint('❌ [PRODUCT_API] El producto no existe');
+        throw Exception('El producto no existe');
+      }
+      
+      final productData = productDoc.data();
+      if (productData == null) {
+        debugPrint('❌ [PRODUCT_API] No se pudieron obtener los datos del producto');
+        throw Exception('No se pudieron obtener los datos del producto');
+      }
+      
+      final productUserId = productData['userId'] as String?;
+      debugPrint('🔑 [PRODUCT_API] UserId del producto: $productUserId');
+      debugPrint('🔑 [PRODUCT_API] Comparando: "$productUserId" == "$currentUserId"');
+      
+      bool shouldAssignUserId = false;
+      
+      if (productUserId == null || productUserId.isEmpty) {
+        debugPrint('⚠️ [PRODUCT_API] El producto no tiene userId, se asignará al usuario actual');
+        // Si el producto no tiene userId, lo asignamos al usuario actual
+        data['userId'] = currentUserId;
+        shouldAssignUserId = true;
+      } else if (productUserId != currentUserId) {
+        // Si el userId no coincide, actualizamos el userId del producto al usuario actual
+        // Esto puede pasar si el producto se creó con un userId incorrecto
+        debugPrint('⚠️ [PRODUCT_API] El userId del producto no coincide con el usuario actual');
+        debugPrint('⚠️ [PRODUCT_API] Producto userId: "$productUserId"');
+        debugPrint('⚠️ [PRODUCT_API] Usuario actual: "$currentUserId"');
+        debugPrint('⚠️ [PRODUCT_API] Actualizando el userId del producto al usuario actual');
+        data['userId'] = currentUserId;
+        shouldAssignUserId = true;
+      }
+      
+      debugPrint('✅ [PRODUCT_API] Verificación de permisos correcta');
       
       DialogHelper.showProcessingDialog(
         title: 'Actualizando...',
@@ -139,11 +182,18 @@ abstract class ProductApi {
         debugPrint('📤 [PRODUCT_API] Subiendo nueva imagen...');
         final String imageUrl = await AppHelper.uploadFile(
           file: imageFile,
-          userId: currentUser.userId,
+          userId: currentUserId,
         );
         data['imageUrl'] = imageUrl;
+        data['image'] = imageUrl; // Mantener compatibilidad con campo 'image'
       }
 
+      // Solo remover userId si NO lo acabamos de asignar
+      // (para productos existentes que ya tienen userId, no lo modificamos)
+      if (!shouldAssignUserId) {
+        data.remove('userId'); // Remover userId si está presente para no modificarlo
+      }
+      
       data['updatedAt'] = Timestamp.now();
 
       // Actualizar en Firestore
@@ -307,6 +357,110 @@ abstract class ProductApi {
         debugPrint('❌ [PRODUCT_API] Error incluso sin orderBy: $e2');
         return [];
       }
+    }
+  }
+
+  // Buscar productos en Firestore (búsqueda optimizada por palabras)
+  static Future<List<Map<String, dynamic>>> searchProducts({
+    required String query,
+  }) async {
+    try {
+      debugPrint('🔍 [PRODUCT_API] Buscando productos con query: "$query"');
+      
+      // Dividir la query en palabras individuales para búsqueda más flexible
+      final queryWords = query
+          .toLowerCase()
+          .trim()
+          .split(RegExp(r'\s+'))
+          .where((word) => word.isNotEmpty)
+          .toList();
+      
+      if (queryWords.isEmpty) {
+        return [];
+      }
+      
+      // Obtener todos los productos de una vez (más eficiente para búsqueda)
+      // Firestore tiene límite de 1MB por consulta, pero para búsqueda necesitamos todos
+      QuerySnapshot<Map<String, dynamic>> snapshot;
+      try {
+        snapshot = await productsRef
+            .orderBy('createdAt', descending: true)
+            .get();
+      } catch (e) {
+        // Si falla por índice, obtener sin orderBy
+        debugPrint('⚠️ [PRODUCT_API] Intentando sin orderBy: $e');
+        snapshot = await productsRef.get();
+      }
+      
+      debugPrint('📦 [PRODUCT_API] Productos obtenidos para búsqueda: ${snapshot.docs.length}');
+      
+      // Filtrar en memoria por palabras individuales (más rápido)
+      final allProducts = snapshot.docs.map((doc) => doc.data()).toList();
+      
+      // Normalizar query para búsqueda
+      final queryLower = query.toLowerCase().trim();
+      
+      // Función de búsqueda optimizada que busca por palabras individuales
+      final filteredProducts = allProducts.where((product) {
+        final name = (product['name'] ?? '').toString().toLowerCase();
+        final category = (product['category'] ?? '').toString().toLowerCase();
+        final description = (product['description'] ?? '').toString().toLowerCase();
+        final articleCode = (product['articleCode'] ?? '').toString().toLowerCase();
+        
+        // Combinar todos los campos en un solo texto para búsqueda rápida
+        final searchableText = '$name $category $description $articleCode';
+        
+        // 1. Primero verificar si la frase completa está presente (más relevante)
+        if (searchableText.contains(queryLower)) {
+          return true;
+        }
+        
+        // 2. Si hay múltiples palabras, verificar que AL MENOS UNA palabra coincida
+        // Esto permite búsquedas flexibles: "batido puleva" encontrará productos con "batido" o "puleva"
+        if (queryWords.length > 1) {
+          // Verificar si alguna palabra coincide
+          for (final word in queryWords) {
+            if (searchableText.contains(word)) {
+              return true; // Si al menos una palabra coincide, incluir el producto
+            }
+          }
+          return false; // Ninguna palabra coincide
+        } else {
+          // Si es una sola palabra, buscar coincidencia exacta
+          return searchableText.contains(queryWords.first);
+        }
+      }).toList();
+      
+      // Ordenar resultados por relevancia (productos con más coincidencias primero)
+      filteredProducts.sort((a, b) {
+        final aName = (a['name'] ?? '').toString().toLowerCase();
+        final bName = (b['name'] ?? '').toString().toLowerCase();
+        
+        // Priorizar productos cuyo nombre contiene la frase completa
+        final aHasFullMatch = aName.contains(queryLower);
+        final bHasFullMatch = bName.contains(queryLower);
+        
+        if (aHasFullMatch && !bHasFullMatch) return -1;
+        if (!aHasFullMatch && bHasFullMatch) return 1;
+        
+        // Si ambos tienen o no tienen coincidencia completa, ordenar por número de palabras que coinciden
+        int aMatches = 0;
+        int bMatches = 0;
+        
+        for (final word in queryWords) {
+          if (aName.contains(word)) aMatches++;
+          if (bName.contains(word)) bMatches++;
+        }
+        
+        return bMatches.compareTo(aMatches); // Más coincidencias primero
+      });
+      
+      debugPrint('🔍 [PRODUCT_API] Búsqueda completada: ${filteredProducts.length} productos encontrados de ${allProducts.length} totales');
+      
+      return filteredProducts;
+    } catch (e) {
+      debugPrint('❌ [PRODUCT_API] Error buscando productos: $e');
+      return [];
     }
   }
 

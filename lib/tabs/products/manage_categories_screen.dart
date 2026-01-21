@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chat_messenger/components/cached_image_with_retry.dart';
 import 'package:chat_messenger/api/category_api.dart';
 import 'package:chat_messenger/controllers/product_controller.dart';
 import 'package:chat_messenger/tabs/products/add_category_screen.dart';
@@ -155,16 +156,16 @@ class ManageCategoriesScreen extends StatelessWidget {
                     child: imageUrl.isNotEmpty
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: CachedNetworkImage(
+                            child: CachedImageWithRetry(
                               imageUrl: imageUrl,
                               fit: BoxFit.cover,
-                              placeholder: (context, url) => Center(
+                              placeholder: Center(
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                   color: goldColor,
                                 ),
                               ),
-                              errorWidget: (context, url, error) => Icon(
+                              errorWidget: Icon(
                                 IconlyLight.image,
                                 color: isDarkMode ? Colors.white54 : Colors.grey[600],
                               ),

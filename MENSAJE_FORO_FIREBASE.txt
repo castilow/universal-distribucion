@@ -1,0 +1,50 @@
+Subject: Firebase Storage 412 Error - Service Account Permissions Not Working After 8+ Hours
+
+Hello Firebase Team,
+
+I'm experiencing a persistent HTTP 412 error when trying to load images from Firebase Storage. Despite assigning the correct IAM role, the issue persists after 8+ hours.
+
+PROJECT INFORMATION:
+- Project Name: universal-distribucion
+- Project ID: universal-distribucion
+- Project Number: 70473962578
+- Storage Bucket: universal-distribucion.firebasestorage.app
+
+ERROR:
+HTTP request failed, statusCode: 412
+Error message: "A required service account is missing necessary permissions. Please resolve by visiting the Storage page of the Firebase Console and re-linking your Firebase bucket"
+
+WHAT I'VE TRIED:
+1. ✅ Assigned "Cloud Storage for Firebase Service Agent" role (roles/firebasestorage.serviceAgent) to:
+   service-70473962578@gcp-sa-firebasestorage.iam.gserviceaccount.com
+   - Verified in Google Cloud Console IAM that the role is correctly assigned
+   - Even tried assigning "Owner" role - still doesn't work
+
+2. ✅ Storage rules configured with `allow read: if true` for public read access
+
+3. ✅ Waited 8+ hours for IAM permission propagation
+
+4. ✅ Verified billing is active
+
+5. ✅ Attempted to regenerate download URLs using getDownloadURL() and getData() - both fail with 412 error
+
+IMPACT:
+- Previously uploaded images cannot be displayed in the app
+- Users cannot see product images
+- Core app functionality is affected
+
+ERROR LOGS:
+```
+══╡ EXCEPTION CAUGHT BY IMAGE RESOURCE SERVICE ╞════════════════════════════════════════════════════
+HTTP request failed, statusCode: 412,
+https://firebasestorage.googleapis.com/v0/b/universal-distribucion.firebasestorage.app/o/uploads%2F...
+```
+
+QUESTION:
+Is there a way to re-link the Storage bucket as suggested in the error message? I cannot find this option in Firebase Console. Also, is it normal for IAM permissions to take more than 8 hours to propagate?
+
+Any help would be greatly appreciated!
+
+LINKS:
+- IAM Console: https://console.cloud.google.com/iam-admin/iam?project=universal-distribucion
+- Storage Console: https://console.firebase.google.com/project/universal-distribucion/storage

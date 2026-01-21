@@ -8,6 +8,7 @@ import 'package:chat_messenger/media/helpers/media_helper.dart';
 import 'package:chat_messenger/helpers/permission_helper.dart';
 import 'package:wechat_assets_picker/wechat_assets_picker.dart';
 import 'package:flutter_iconly/flutter_iconly.dart';
+import 'package:chat_messenger/components/cached_image_with_retry.dart';
 
 class AddCategoryScreen extends StatefulWidget {
   final Map<String, dynamic>? category;
@@ -188,29 +189,27 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                     : _existingImageUrl != null
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(14),
-                            child: Image.network(
-                              _existingImageUrl!,
+                            child: CachedImageWithRetry(
+                              imageUrl: _existingImageUrl!,
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      IconlyLight.image,
-                                      size: 48,
+                              errorWidget: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    IconlyLight.image,
+                                    size: 48,
+                                    color: isDarkMode ? Colors.white54 : Colors.grey[600],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'Toca para cambiar imagen',
+                                    style: TextStyle(
                                       color: isDarkMode ? Colors.white54 : Colors.grey[600],
+                                      fontSize: 14,
                                     ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      'Toca para cambiar imagen',
-                                      style: TextStyle(
-                                        color: isDarkMode ? Colors.white54 : Colors.grey[600],
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
+                                  ),
+                                ],
+                              ),
                             ),
                           )
                         : Column(

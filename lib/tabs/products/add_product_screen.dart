@@ -9,6 +9,7 @@ import 'package:chat_messenger/helpers/permission_helper.dart';
 import 'package:wechat_assets_picker/wechat_assets_picker.dart';
 import 'package:flutter_iconly/flutter_iconly.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:chat_messenger/components/cached_image_with_retry.dart';
 
 class AddProductScreen extends StatefulWidget {
   final Map<String, dynamic>? product;
@@ -141,15 +142,39 @@ class _AddProductScreenState extends State<AddProductScreen> {
         return;
       }
 
-      // Usar MediaHelper que es más confiable en iOS
-      final List<File>? files = await MediaHelper.getAssets(
-        maxAssets: 1,
-        requestType: RequestType.image,
-      );
-
-      if (files != null && files.isNotEmpty) {
-        final File imageFile = files.first;
+      // En Android, usar ImagePicker directamente que es más confiable
+      // En iOS, usar MediaHelper.getAssets para mejor experiencia
+      final File? imageFile;
+      
+      if (Platform.isAndroid) {
+        // Usar ImagePicker directamente en Android
+        final XFile? pickedFile = await _picker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 85,
+          maxWidth: 1920,
+          maxHeight: 1920,
+        );
         
+        if (pickedFile != null) {
+          imageFile = File(pickedFile.path);
+        } else {
+          imageFile = null;
+        }
+      } else {
+        // Usar MediaHelper en iOS para mejor experiencia
+        final List<File>? files = await MediaHelper.getAssets(
+          maxAssets: 1,
+          requestType: RequestType.image,
+        );
+        
+        if (files != null && files.isNotEmpty) {
+          imageFile = files.first;
+        } else {
+          imageFile = null;
+        }
+      }
+
+      if (imageFile != null) {
         // Verificar que el archivo existe
         if (await imageFile.exists()) {
           setState(() {
@@ -388,7 +413,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     child: _imageFile != null
                         ? Image.file(_imageFile!, fit: BoxFit.cover)
                         : (isEditing && widget.product!['imageUrl'] != null)
-                            ? Image.network(widget.product!['imageUrl'], fit: BoxFit.cover)
+                            ? CachedImageWithRetry(
+                                imageUrl: widget.product!['imageUrl'],
+                                fit: BoxFit.cover,
+                                errorWidget: Container(
+                                  color: const Color(0xFF1C1C1E),
+                                  child: Icon(IconlyLight.image, size: 64, color: goldColor.withOpacity(0.3)),
+                                ),
+                              )
                             : Container(
                                 color: const Color(0xFF1C1C1E),
                                 child: Column(

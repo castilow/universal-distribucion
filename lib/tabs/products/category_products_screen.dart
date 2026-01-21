@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_iconly/flutter_iconly.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chat_messenger/components/cached_image_with_retry.dart';
 import 'package:chat_messenger/controllers/order_controller.dart';
 import 'package:chat_messenger/controllers/product_controller.dart';
 import 'dart:io';
@@ -92,10 +93,10 @@ class CategoryProductsScreen extends StatelessWidget {
                   }
                   
                   if (imagePath.toString().startsWith('http')) {
-                    return CachedNetworkImage(
+                    return CachedImageWithRetry(
                       imageUrl: imagePath,
                       fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
+                      placeholder: Container(
                         color: const Color(0xFF1C1C1E),
                         child: Center(
                           child: CircularProgressIndicator(
@@ -104,7 +105,7 @@ class CategoryProductsScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                      errorWidget: (context, url, error) => _buildErrorWidget(product),
+                      errorWidget: _buildErrorWidget(product),
                     );
                   } else {
                     return Image.file(
